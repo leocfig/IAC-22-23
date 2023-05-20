@@ -1,12 +1,22 @@
 ; *********************************************************************
-; * IST-UL
-; * Modulo:    lab3.asm
-; * Descrição: Exemplifica o acesso a um teclado.
-; *            Lê uma linha do teclado, verificando se há alguma tecla
-; *            premida nessa linha.
+; * PROJETO IAC
+; * 
+; * Grupo: Número 26
+; *        Constituido por:
+; *        -               NºIST:
+; *        -               NºIST:
+; *        -               NºIST:
 ; *
 ; *
 ; *********************************************************************
+
+
+; Tarefas a fazer:
+; - diminuir o numero de registos
+;
+;
+;
+
 
 ; **********************************************************************
 ; * Constantes
@@ -35,12 +45,11 @@ inicio:
     MOV  R5, MASCARA   ; para isolar os 4 bits de menor peso, ao ler as colunas do teclado
     MOV  R6, LINHA     ; testar a linha em consideraçao
     MOV  R10, 0
-    MOV  R15, 0
 
 ; corpo principal do programa
 ciclo:
     MOV  R6, LINHA     ; volta 'a primeira linha
-    MOVB [R4], R15      ; escreve linha e coluna a zero nos displays
+    MOV  [R4], R10     ; escreve linha e coluna a zero nos displays
 
 
 espera_tecla:          ; neste ciclo espera-se até uma tecla ser premida
@@ -55,15 +64,14 @@ espera_tecla:          ; neste ciclo espera-se até uma tecla ser premida
                        ; vai mostrar a linha e a coluna da tecla
                        
 valor_tecla_linha:
-    MOV  R11, 1
-    CMP  R6, R11       ; verifica se o valor da tecla da linha esta' a um
+    CMP  R6, 1       ; verifica se o valor da tecla da linha esta' a um
     JZ  valor_tecla_coluna
     SHR  R6, 1         ; desloca 'a direita 1 bit da linha
     ADD  R7, 1
     JNZ  valor_tecla_linha
 
 valor_tecla_coluna:
-    CMP  R0, R11       ; verifica se o valor da tecla da linha esta' a um
+    CMP  R0, 1       ; verifica se o valor da tecla da linha esta' a um
     JZ   obtem_valor   ;
     SHR  R0, 1         ; desloca 'a direita 1 bit da linha
     ADD  R8, 1
@@ -72,10 +80,9 @@ valor_tecla_coluna:
 obtem_valor:
     SHL  R7, 2         ; multiplicar o valor da tecla da linha por 4
     ADD  R8, R7        ; somar o valor da tecla da linha e da coluna
-    MOV  R10, R8
-    CMP  R10, CONST_INC
+    CMP  R8, CONST_INC
     JZ   incrementa
-    CMP  R10, CONST_DEC
+    CMP  R8, CONST_DEC
     JZ   decrementa
 
 ha_tecla:              ; neste ciclo espera-se até NENHUMA tecla estar premida
@@ -86,27 +93,27 @@ ha_tecla:              ; neste ciclo espera-se até NENHUMA tecla estar premida
     CMP  R0, 0         ; há tecla premida?
     JNZ  ha_tecla      ; se ainda houver uma tecla premida, espera até não haver
 
-    MOV  R12, ULTIMA_LINHA
-    CMP  R9, R12       ; ver se a linha e' a ultima
+    MOV  R11, ULTIMA_LINHA
+    CMP  R9, R11       ; ver se a linha e' a ultima
     JNZ  avanca_linha  ; ir para a linha seguinte
     MOV  R6, R9        ; atualiza o valor atual da linha
     JMP  ciclo         ; repete ciclo
 
 avanca_linha:
-    MOV  R12, 8
-    CMP  R9, R12       ; ver se a linha e' a ultima
+    MOV  R11, 8
+    CMP  R9, R11       ; ver se a linha e' a ultima
     JZ   ciclo 
     SHL  R9, 1         ; para ir para a linha seguinte
     MOV  R6, R9        ; atualiza o valor atual da linha
     JMP  espera_tecla  ; repete ciclo
 
 incrementa:
-    INC  [R4]
-    MOVB [R4], R15
-    JMP  espera_tecla
+    INC  R10
+    MOV  [R4], R10
+    JMP  ha_tecla
 
 decrementa:
-    SUB  R15, 1
-    MOVB [R4], R15
-    JMP  espera_tecla
+    DEC  R10
+    MOV  [R4], R10
+    JMP  ha_tecla
 
