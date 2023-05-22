@@ -14,6 +14,9 @@
 ; Tarefas a fazer:
 ; - no incremento, e se chegar ao maximo
 ; - comentarios
+; - relatorio
+; - o painel tem de ir mudando de corzinhas
+; - videozinho fofo?
 ;
 
 
@@ -41,7 +44,7 @@ DEFINE_PIXEL    		EQU COMANDOS + 12H		; endereço do comando para escrever um pix
 APAGA_AVISO     		EQU COMANDOS + 40H		; endereço do comando para apagar o aviso de nenhum cenário selecionado
 APAGA_ECRÃ	 		    EQU COMANDOS + 02H		; endereço do comando para apagar todos os pixels já desenhados
 SELECIONA_CENARIO_FUNDO EQU COMANDOS + 42H		; endereço do comando para selecionar uma imagem de fundo
-ATRASO			        EQU	400H		; atraso para limitar a velocidade de movimento do boneco
+ATRASO			        EQU	400H		        ; atraso para limitar a velocidade de movimento do boneco
 
 LARGURA_AST			    EQU	5			; largura do boneco
 ALTURA_AST			    EQU	5			; altura do boneco
@@ -51,13 +54,13 @@ LINHA_NAVE              EQU 25
 COLUNA_NAVE             EQU 25
 
 VERDE   			    EQU	0F0F0H		; cor do pixel: verde em ARGB (opaco e vermelho no máximo, verde e azul a 0)
-CINZENTO-CLARO   	    EQU	0FCCCH		; cor do pixel: cinzento-claro em ARGB (opaco e vermelho no máximo, verde e azul a 0)
-AZUL-ESCURO   	        EQU	0F257H		; cor do pixel: azul-escuro em ARGB (opaco e vermelho no máximo, verde e azul a 0)
-AZUL-CLARO   			EQU	0F1DEH		; cor do pixel: azul-claro em ARGB (opaco e vermelho no máximo, verde e azul a 0)
-CINZENTO-ESCURO   	    EQU	0F555H		; cor do pixel: cinzento-escuro em ARGB (opaco e vermelho no máximo, verde e azul a 0)
-AZUL-ESMERALDA   		EQU	0F2FFH		; cor do pixel: azul-esmeralda em ARGB (opaco e vermelho no máximo, verde e azul a 0)
+CINZENTO_CLARO   	    EQU	0FCCCH		; cor do pixel: cinzento-claro em ARGB (opaco e vermelho no máximo, verde e azul a 0)
+AZUL_ESCURO   	        EQU	0F257H		; cor do pixel: azul-escuro em ARGB (opaco e vermelho no máximo, verde e azul a 0)
+AZUL_CLARO   			EQU	0F1DEH		; cor do pixel: azul-claro em ARGB (opaco e vermelho no máximo, verde e azul a 0)
+CINZENTO_ESCURO   	    EQU	0F555H		; cor do pixel: cinzento-escuro em ARGB (opaco e vermelho no máximo, verde e azul a 0)
+AZUL_ESMERALDA   		EQU	0F2FFH		; cor do pixel: azul-esmeralda em ARGB (opaco e vermelho no máximo, verde e azul a 0)
 LARANJA   			    EQU	0FF40H		; cor do pixel: laranja em ARGB (opaco e vermelho no máximo, verde e azul a 0)
-QUASE-PRETO   			EQU	0F333H		; cor do pixel: quase-preto em ARGB (opaco e vermelho no máximo, verde e azul a 0)
+QUASE_PRETO   			EQU	0F333H		; cor do pixel: quase-preto em ARGB (opaco e vermelho no máximo, verde e azul a 0)
 BRANCO                  EQU 0FFFFH      ; cor do pixel: branco em ARGB (opaco e vermelho no máximo, verde e azul a 0)
 
 
@@ -88,14 +91,14 @@ DEF_ASTEROIDE:					; tabela que define o asteroide
 
 DEF_NAVE:					; tabela que define o painel 
 	WORD		LARGURA_NAVE, ALTURA_NAVE
-	WORD		0, 0, 0, 0, 0, 0, 0, 0, CINZENTO-ESCURO,  0, 0, 0, 0, 0, 0, 0, 0
+	WORD		0, 0, 0, 0, 0, 0, 0, 0, CINZENTO_ESCURO,  0, 0, 0, 0, 0, 0, 0, 0
 	WORD		0, 0, 0, 0, 0, 0, 0, 0, BRANCO, 0, 0, 0, 0, 0, 0, 0, 0
-	WORD		0, 0, LARANJA, 0, 0, 0, 0, BRANCO, AZUL-ESMERALDA, BRANCO, 0, 0, 0, 0, LARANJA, 0, 0
-	WORD		0, 0, QUASE-PRETO, 0, 0, 0, 0, CINZENTO-CLARO, AZUL-CLARO, CINZENTO-CLARO, 0, 0, 0, 0, QUASE-PRETO, 0, 0
-	WORD		0, 0, CINZENTO-ESCURO, 0, 0, 0, CINZENTO-ESCURO, CINZENTO-CLARO, AZUL-ESCURO, CINZENTO-CLARO, CINZENTO-ESCURO, 0, 0, 0, CINZENTO-ESCURO, 0, 0
-	WORD		0, BRANCO, CINZENTO-ESCURO, BRANCO, 0, 0, CINZENTO-ESCURO, CINZENTO-CLARO, CINZENTO-ESCURO, CINZENTO-CLARO, CINZENTO-ESCURO, 0, 0, BRANCO, CINZENTO-ESCURO, BRANCO, 0
-	WORD		CINZENTO-ESCURO, BRANCO, CINZENTO-CLARO, BRANCO, CINZENTO-CLARO, CINZENTO-CLARO, CINZENTO-ESCURO, CINZENTO-CLARO, BRANCO, CINZENTO-CLARO, CINZENTO-ESCURO, CINZENTO-CLARO, CINZENTO-CLARO, BRANCO, CINZENTO-CLARO, BRANCO, CINZENTO-ESCURO 
-	WORD		CINZENTO-ESCURO, BRANCO, BRANCO, BRANCO, CINZENTO-CLARO, CINZENTO-ESCURO, CINZENTO-ESCURO, CINZENTO-CLARO, CINZENTO-CLARO, CINZENTO-CLARO, CINZENTO-ESCURO, CINZENTO-ESCURO, CINZENTO-CLARO, BRANCO, BRANCO, BRANCO, CINZENTO-ESCURO
+	WORD		0, 0, LARANJA, 0, 0, 0, 0, BRANCO, AZUL_ESMERALDA, BRANCO, 0, 0, 0, 0, LARANJA, 0, 0
+	WORD		0, 0, QUASE_PRETO, 0, 0, 0, 0, CINZENTO_CLARO, AZUL_CLARO, CINZENTO_CLARO, 0, 0, 0, 0, QUASE_PRETO, 0, 0
+	WORD		0, 0, CINZENTO_ESCURO, 0, 0, 0, CINZENTO_ESCURO, CINZENTO_CLARO, AZUL_ESCURO, CINZENTO_CLARO, CINZENTO_ESCURO, 0, 0, 0, CINZENTO_ESCURO, 0, 0
+	WORD		0, BRANCO, CINZENTO_ESCURO, BRANCO, 0, 0, CINZENTO_ESCURO, CINZENTO_CLARO, CINZENTO_ESCURO, CINZENTO_CLARO, CINZENTO_ESCURO, 0, 0, BRANCO, CINZENTO_ESCURO, BRANCO, 0
+	WORD		CINZENTO_ESCURO, BRANCO, CINZENTO_CLARO, BRANCO, CINZENTO_CLARO, CINZENTO_CLARO, CINZENTO_ESCURO, CINZENTO_CLARO, BRANCO, CINZENTO_CLARO, CINZENTO_ESCURO, CINZENTO_CLARO, CINZENTO_CLARO, BRANCO, CINZENTO_CLARO, BRANCO, CINZENTO_ESCURO 
+	WORD		CINZENTO_ESCURO, BRANCO, BRANCO, BRANCO, CINZENTO_CLARO, CINZENTO_ESCURO, CINZENTO_ESCURO, CINZENTO_CLARO, CINZENTO_CLARO, CINZENTO_CLARO, CINZENTO_ESCURO, CINZENTO_ESCURO, CINZENTO_CLARO, BRANCO, BRANCO, BRANCO, CINZENTO_ESCURO
 
     
 
@@ -461,18 +464,18 @@ desenha_nave:
     PUSH R5
     PUSH R6
 
-    posição_boneco_1:
+    posição_boneco_3:
         MOV  R1, LINHA_NAVE			; linha do boneco
         MOV  R2, COLUNA_NAVE		; coluna do boneco
 
-    desenha_boneco:       		; desenha o boneco a partir da tabela
+    desenha_boneco_2:       		; desenha o boneco a partir da tabela
         MOV	R4, DEF_NAVE		; endereço da tabela que define o boneco
         MOV	R5, [R4]            ; obtém a LARGURA_AST do boneco
         ADD	R4, 2			    ; endereço da ALTURA_AST que define o boneco
         MOV	R6, [R4]			; obtém a ALTURA_AST do boneco
         ADD	R4, 2			    ; endereço da cor do 1º pixel (2 porque a ALTURA_AST é uma word)
 
-        preenche_linha:
+        preenche_linha_2:
         MOV	 R3, [R4]			; obtém a cor do próximo pixel do boneco
         MOV  [DEFINE_LINHA], R1	; seleciona a linha
         MOV  [DEFINE_COLUNA],R2	; seleciona a coluna
@@ -485,7 +488,7 @@ desenha_nave:
         MOV  R2, COLUNA_NAVE
         SUB  R6, 1
         MOV  R5, LARGURA_NAVE
-        JNZ  preenche_linha
+        JNZ  preenche_linha_2
 
     POP R6
     POP R5
