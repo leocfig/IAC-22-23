@@ -45,7 +45,21 @@ ATRASO			        EQU	400H		; atraso para limitar a velocidade de movimento do bo
 
 LARGURA_AST			    EQU	5			; largura do boneco
 ALTURA_AST			    EQU	5			; altura do boneco
-VERDE   			    EQU	0F0F0H		; cor do pixel: vermelho em ARGB (opaco e vermelho no máximo, verde e azul a 0)
+LARGURA_NAVE            EQU 17          ; largura da nave
+ALTURA_NAVE             EQU 8           ; altura da nave
+LINHA_NAVE              EQU 25
+COLUNA_NAVE             EQU 25
+
+VERDE   			    EQU	0F0F0H		; cor do pixel: verde em ARGB (opaco e vermelho no máximo, verde e azul a 0)
+CINZENTO-CLARO   	    EQU	0FCCCH		; cor do pixel: cinzento-claro em ARGB (opaco e vermelho no máximo, verde e azul a 0)
+AZUL-ESCURO   	        EQU	0F257H		; cor do pixel: azul-escuro em ARGB (opaco e vermelho no máximo, verde e azul a 0)
+AZUL-CLARO   			EQU	0F1DEH		; cor do pixel: azul-claro em ARGB (opaco e vermelho no máximo, verde e azul a 0)
+CINZENTO-ESCURO   	    EQU	0F555H		; cor do pixel: cinzento-escuro em ARGB (opaco e vermelho no máximo, verde e azul a 0)
+AZUL-ESMERALDA   		EQU	0F2FFH		; cor do pixel: azul-esmeralda em ARGB (opaco e vermelho no máximo, verde e azul a 0)
+LARANJA   			    EQU	0FF40H		; cor do pixel: laranja em ARGB (opaco e vermelho no máximo, verde e azul a 0)
+QUASE-PRETO   			EQU	0F333H		; cor do pixel: quase-preto em ARGB (opaco e vermelho no máximo, verde e azul a 0)
+BRANCO                  EQU 0FFFFH      ; cor do pixel: branco em ARGB (opaco e vermelho no máximo, verde e azul a 0)
+
 
 
 ; **********************************************************************
@@ -61,15 +75,28 @@ tecla_carregada:   WORD  0 ; variavel que guarda a tecla que se encontra carrega
 linha_asteroide:   WORD  0 ; variavel que guarda a linha do asteroide
 coluna_asteroide:  WORD  0 ; variavel que guarda a coluna do asteroide
 
+
 PLACE		0300H				
 
-DEF_BONECO:					; tabela que define o boneco (cor, LARGURA_AST, pixels)
+DEF_ASTEROIDE:					; tabela que define o asteroide 
 	WORD		LARGURA_AST, ALTURA_AST
 	WORD		0,     VERDE, VERDE, VERDE,     0
 	WORD		VERDE, VERDE, VERDE, VERDE, VERDE
 	WORD		VERDE, VERDE, VERDE, VERDE, VERDE
 	WORD		VERDE, VERDE, VERDE, VERDE, VERDE
 	WORD		0,     VERDE, VERDE, VERDE,     0
+
+DEF_NAVE:					; tabela que define o painel 
+	WORD		LARGURA_NAVE, ALTURA_NAVE
+	WORD		0, 0, 0, 0, 0, 0, 0, 0, CINZENTO-ESCURO,  0, 0, 0, 0, 0, 0, 0, 0
+	WORD		0, 0, 0, 0, 0, 0, 0, 0, BRANCO, 0, 0, 0, 0, 0, 0, 0, 0
+	WORD		0, 0, LARANJA, 0, 0, 0, 0, BRANCO, AZUL-ESMERALDA, BRANCO, 0, 0, 0, 0, LARANJA, 0, 0
+	WORD		0, 0, QUASE-PRETO, 0, 0, 0, 0, CINZENTO-CLARO, AZUL-CLARO, CINZENTO-CLARO, 0, 0, 0, 0, QUASE-PRETO, 0, 0
+	WORD		0, 0, CINZENTO-ESCURO, 0, 0, 0, CINZENTO-ESCURO, CINZENTO-CLARO, AZUL-ESCURO, CINZENTO-CLARO, CINZENTO-ESCURO, 0, 0, 0, CINZENTO-ESCURO, 0, 0
+	WORD		0, BRANCO, CINZENTO-ESCURO, BRANCO, 0, 0, CINZENTO-ESCURO, CINZENTO-CLARO, CINZENTO-ESCURO, CINZENTO-CLARO, CINZENTO-ESCURO, 0, 0, BRANCO, CINZENTO-ESCURO, BRANCO, 0
+	WORD		CINZENTO-ESCURO, BRANCO, CINZENTO-CLARO, BRANCO, CINZENTO-CLARO, CINZENTO-CLARO, CINZENTO-ESCURO, CINZENTO-CLARO, BRANCO, CINZENTO-CLARO, CINZENTO-ESCURO, CINZENTO-CLARO, CINZENTO-CLARO, BRANCO, CINZENTO-CLARO, BRANCO, CINZENTO-ESCURO 
+	WORD		CINZENTO-ESCURO, BRANCO, BRANCO, BRANCO, CINZENTO-CLARO, CINZENTO-ESCURO, CINZENTO-ESCURO, CINZENTO-CLARO, CINZENTO-CLARO, CINZENTO-CLARO, CINZENTO-ESCURO, CINZENTO-ESCURO, CINZENTO-CLARO, BRANCO, BRANCO, BRANCO, CINZENTO-ESCURO
+
     
 
 
@@ -97,6 +124,7 @@ inicio:
 ; corpo principal do programa
 
 ciclo:
+    CALL desenha_nave 
     CALL desenha_asteroide      ; depois fazer etc
 
 espera_tecla:                   ; neste ciclo espera-se até uma tecla ser premida
@@ -314,7 +342,7 @@ desenha_asteroide:
         MOV  R2, [coluna_asteroide]		    ; coluna do boneco
 
     desenha_boneco:       		; desenha o boneco a partir da tabela
-        MOV	R4, DEF_BONECO		; endereço da tabela que define o boneco
+        MOV	R4, DEF_ASTEROIDE		; endereço da tabela que define o boneco
         MOV	R5, [R4]            ; obtém a LARGURA_AST do boneco
         ADD	R4, 2			    ; endereço da ALTURA_AST que define o boneco
         MOV	R6, [R4]			; obtém a ALTURA_AST do boneco
@@ -376,7 +404,7 @@ desenha_asteroide:
 
 
         apaga_boneco:       		; desenha o boneco a partir da tabela
-            MOV	R4, DEF_BONECO		; endereço da tabela que define o boneco
+            MOV	R4, DEF_ASTEROIDE		; endereço da tabela que define o boneco
             MOV	R5, [R4]            ; obtém a LARGURA_AST do boneco
             ADD	R4, 2			    ; endereço da ALTURA_AST que define o boneco
             MOV	R6, [R4]			; obtém a ALTURA_AST do boneco
@@ -414,4 +442,57 @@ desenha_asteroide:
         POP R2
         POP R1
         RET
+
+
+; *****************************************************************************
+; desenha_nave:  Desenha uma nave
+;
+; Entrada(s): ---
+;
+; Saida(s): ---	
+;
+; *****************************************************************************
+
+desenha_nave:
+    PUSH R1
+    PUSH R2
+    PUSH R3
+    PUSH R4
+    PUSH R5
+    PUSH R6
+
+    posição_boneco_1:
+        MOV  R1, LINHA_NAVE			; linha do boneco
+        MOV  R2, COLUNA_NAVE		; coluna do boneco
+
+    desenha_boneco:       		; desenha o boneco a partir da tabela
+        MOV	R4, DEF_NAVE		; endereço da tabela que define o boneco
+        MOV	R5, [R4]            ; obtém a LARGURA_AST do boneco
+        ADD	R4, 2			    ; endereço da ALTURA_AST que define o boneco
+        MOV	R6, [R4]			; obtém a ALTURA_AST do boneco
+        ADD	R4, 2			    ; endereço da cor do 1º pixel (2 porque a ALTURA_AST é uma word)
+
+        preenche_linha:
+        MOV	 R3, [R4]			; obtém a cor do próximo pixel do boneco
+        MOV  [DEFINE_LINHA], R1	; seleciona a linha
+        MOV  [DEFINE_COLUNA],R2	; seleciona a coluna
+        MOV  [DEFINE_PIXEL], R3	; altera a cor do pixel na linha e coluna selecionadas
+        ADD	 R4, 2			; endereço da cor do próximo pixel (2 porque cada cor de pixel é uma word)
+        ADD  R2, 1               ; próxima coluna
+        SUB  R5, 1			; menos uma coluna para tratar
+        JNZ  preenche_linha      ; continua até percorrer toda a LARGURA_AST do objeto
+        INC  R1
+        MOV  R2, COLUNA_NAVE
+        SUB  R6, 1
+        MOV  R5, LARGURA_NAVE
+        JNZ  preenche_linha
+
+    POP R6
+    POP R5
+    POP R4
+    POP R3
+    POP R2
+    POP R1
+    RET
+
 
