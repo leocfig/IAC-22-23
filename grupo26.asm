@@ -25,11 +25,27 @@
 ULTIMA_LINHA EQU 8
 CONST_DEC    EQU 4
 CONST_INC    EQU 5
+CONST_MOVE   EQU 6
 DISPLAYS     EQU 0A000H  ; endereço dos displays de 7 segmentos (periférico POUT-1)
 TEC_LIN      EQU 0C000H  ; endereço das linhas do teclado (periférico POUT-2)
 TEC_COL      EQU 0E000H  ; endereço das colunas do teclado (periférico PIN)
-LINHA        EQU 1       ; linha inicial a testar
+LINHA_TEC    EQU 1       ; linha inicial a testar
 MASCARA      EQU 0FH     ; para isolar os 4 bits de menor peso, ao ler as colunas do teclado
+
+
+COMANDOS				EQU	6000H			; endereço de base dos comandos do MediaCenter
+
+DEFINE_LINHA    		EQU COMANDOS + 0AH		; endereço do comando para definir a linha
+DEFINE_COLUNA   		EQU COMANDOS + 0CH		; endereço do comando para definir a coluna
+DEFINE_PIXEL    		EQU COMANDOS + 12H		; endereço do comando para escrever um pixel
+APAGA_AVISO     		EQU COMANDOS + 40H		; endereço do comando para apagar o aviso de nenhum cenário selecionado
+APAGA_ECRÃ	 		    EQU COMANDOS + 02H		; endereço do comando para apagar todos os pixels já desenhados
+SELECIONA_CENARIO_FUNDO EQU COMANDOS + 42H		; endereço do comando para selecionar uma imagem de fundo
+ATRASO			        EQU	400H		; atraso para limitar a velocidade de movimento do boneco
+
+LARGURA_AST			    EQU	5			; largura do boneco
+ALTURA_AST			    EQU	5			; altura do boneco
+VERDE   			    EQU	0F0F0H		; cor do pixel: vermelho em ARGB (opaco e vermelho no máximo, verde e azul a 0)
 
 
 ; **********************************************************************
@@ -42,6 +58,20 @@ SP_inicial:
 
 valor_display:     WORD  0 ; variavel que guarda o valor do display
 tecla_carregada:   WORD  0 ; variavel que guarda a tecla que se encontra carregada
+linha_asteroide:   WORD  0 ; variavel que guarda a linha do asteroide
+coluna_asteroide:  WORD  0 ; variavel que guarda a coluna do asteroide
+
+PLACE		0300H				
+
+DEF_BONECO:					; tabela que define o boneco (cor, LARGURA_AST, pixels)
+	WORD		LARGURA_AST, ALTURA_AST
+	WORD		0,     VERDE, VERDE, VERDE,     0
+	WORD		VERDE, VERDE, VERDE, VERDE, VERDE
+	WORD		VERDE, VERDE, VERDE, VERDE, VERDE
+	WORD		VERDE, VERDE, VERDE, VERDE, VERDE
+	WORD		0,     VERDE, VERDE, VERDE,     0
+    
+
 
 
 ; **********************************************************************
@@ -54,16 +84,20 @@ inicio:
 
 ; inicializações
     MOV  SP, SP_inicial ; inicializa SP
-    MOV  R1, 0
     MOV  R3, DISPLAYS   ; endereço do periférico dos displays
-    MOV  R4, LINHA      ; começa-se a testar a primeira linha
+    MOV  R4, LINHA_TEC      ; começa-se a testar a primeira linha
     MOV  [R3], R1       ; escreve linha e coluna a zero nos displays
+    MOV  [APAGA_AVISO], R1	; apaga o aviso de nenhum cenário selecionado (o valor de R1 não é relevante)
+    MOV  [APAGA_ECRÃ], R1	; apaga todos os pixels já desenhados (o valor de R1 não é relevante)
+    MOV	 R1, 0			; cenário de fundo número 0
+    MOV  [SELECIONA_CENARIO_FUNDO], R1	; seleciona o cenário de fundo
+     
 
 
 ; corpo principal do programa
 
 ciclo:
-
+    CALL desenha_asteroide      ; depois fazer etc
 
 espera_tecla:                   ; neste ciclo espera-se até uma tecla ser premida
     CALL obtem_colunas          ; obtem as colunas da determinada linha
@@ -135,7 +169,7 @@ avanca_linha:
     RET
 
     primeira_linha:
-        MOV  R4, LINHA       ; volta-se 'a primeira linha
+        MOV  R4, LINHA_TEC       ; volta-se 'a primeira linha
         POP  R1
         RET
 
@@ -190,12 +224,17 @@ obtem_valor_tecla:
 
 avalia_tecla:
     PUSH R1
+    PUSH R2
     MOV  R1, [tecla_carregada]
+    MOV  R2, CONST_MOVE
     CMP  R1, CONST_INC
     JZ   avalia_tecla_1
     CMP  R1, CONST_DEC
     JZ   avalia_tecla_2
-    JMP  continuacao              ; se nao for nenhuma daquelas teclas
+    CMP  R1, R2
+    JZ   avalia_tecla_3              ; se nao for nenhuma daquelas teclas
+    JMP  continuacao
+
 
     avalia_tecla_1:
         CALL incrementa
@@ -203,8 +242,13 @@ avalia_tecla:
 
     avalia_tecla_2:
         CALL decrementa
+        JMP  continuacao
+
+    avalia_tecla_3:
+        CALL move_asteroide
 
     continuacao:
+    POP R2
     POP R1
     RET
 
@@ -246,3 +290,128 @@ decrementa:
     MOV  [R3], R1
     POP  R1
     RET
+
+
+; *****************************************************************************
+; desenha_asteroide:  Desenha um asteroide
+;
+; Entrada(s): ---
+;
+; Saida(s): ---	
+;
+; *****************************************************************************
+
+desenha_asteroide:
+    PUSH R1
+    PUSH R2
+    PUSH R3
+    PUSH R4
+    PUSH R5
+    PUSH R6
+
+    posição_boneco_1:
+        MOV  R1, [linha_asteroide]			; linha do boneco
+        MOV  R2, [coluna_asteroide]		    ; coluna do boneco
+
+    desenha_boneco:       		; desenha o boneco a partir da tabela
+        MOV	R4, DEF_BONECO		; endereço da tabela que define o boneco
+        MOV	R5, [R4]            ; obtém a LARGURA_AST do boneco
+        ADD	R4, 2			    ; endereço da ALTURA_AST que define o boneco
+        MOV	R6, [R4]			; obtém a ALTURA_AST do boneco
+        ADD	R4, 2			    ; endereço da cor do 1º pixel (2 porque a ALTURA_AST é uma word)
+
+        preenche_linha:
+        MOV	 R3, [R4]			; obtém a cor do próximo pixel do boneco
+        MOV  [DEFINE_LINHA], R1	; seleciona a linha
+        MOV  [DEFINE_COLUNA],R2	; seleciona a coluna
+        MOV  [DEFINE_PIXEL], R3	; altera a cor do pixel na linha e coluna selecionadas
+        ADD	 R4, 2			; endereço da cor do próximo pixel (2 porque cada cor de pixel é uma word)
+        ADD  R2, 1               ; próxima coluna
+        SUB  R5, 1			; menos uma coluna para tratar
+        JNZ  preenche_linha      ; continua até percorrer toda a LARGURA_AST do objeto
+        INC  R1
+        MOV  R2, [coluna_asteroide]
+        SUB  R6, 1
+        MOV  R5, LARGURA_AST
+        JNZ  preenche_linha
+
+    POP R6
+    POP R5
+    POP R4
+    POP R3
+    POP R2
+    POP R1
+    RET
+
+
+
+; *****************************************************************************
+; move_asteroide:  Move o asteroide
+;
+; Entrada(s): ---
+;
+; Saida(s): ---	
+;
+; *****************************************************************************
+    
+    move_asteroide:
+
+        PUSH R1
+        PUSH R2
+        PUSH R3
+        PUSH R4
+        PUSH R5
+        PUSH R6
+        PUSH R7
+        
+        MOV	R7, ATRASO		       ; atraso para limitar a velocidade de movimento do boneco		
+
+        ciclo_atraso:
+            SUB	R7, 1
+            JNZ	ciclo_atraso
+
+        posição_boneco_2:
+            MOV  R1, [linha_asteroide]	   ; linha do boneco
+            MOV  R2, [coluna_asteroide]    ; coluna do boneco
+
+
+        apaga_boneco:       		; desenha o boneco a partir da tabela
+            MOV	R4, DEF_BONECO		; endereço da tabela que define o boneco
+            MOV	R5, [R4]            ; obtém a LARGURA_AST do boneco
+            ADD	R4, 2			    ; endereço da ALTURA_AST que define o boneco
+            MOV	R6, [R4]			; obtém a ALTURA_AST do boneco
+
+        apaga_linha:
+            MOV	 R3, 0			    ; obtém a cor do próximo pixel do boneco
+            MOV  [DEFINE_LINHA], R1	; seleciona a linha
+            MOV  [DEFINE_COLUNA],R2	; seleciona a coluna
+            MOV  [DEFINE_PIXEL], R3	; altera a cor do pixel na linha e coluna selecionadas
+            INC  R2                 ; próxima coluna
+            DEC  R5          		; menos uma coluna para tratar
+            JNZ  apaga_linha     ; continua até percorrer toda a LARGURA_AST do objeto
+            INC  R1
+            MOV  R2, [coluna_asteroide]
+            DEC  R6
+            MOV  R5, LARGURA_AST
+            JNZ  apaga_linha
+
+        incremento_posicao_ast:
+            MOV  R1, [linha_asteroide]	   ; linha do boneco
+            MOV  R2, [coluna_asteroide]    ; coluna do boneco
+            INC  R1
+            INC  R2
+            MOV  [linha_asteroide], R1
+            MOV  [coluna_asteroide], R2
+        
+
+        CALL desenha_asteroide
+
+        POP R7
+        POP R6
+        POP R5
+        POP R4
+        POP R3
+        POP R2
+        POP R1
+        RET
+
