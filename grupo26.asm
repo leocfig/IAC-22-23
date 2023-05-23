@@ -14,10 +14,10 @@
 ; Tarefas a fazer:
 ; - no incremento, e se chegar ao maximo
 ; - comentarios
-; - relatorio
 ; - o painel tem de ir mudando de corzinhas
-; - videozinho fofo?
-;
+; - por constantes daqueles nr do inc e dec
+; - nao duplicar codigo
+; - teclado?
 
 
 ; **********************************************************************
@@ -25,19 +25,21 @@
 ; **********************************************************************
 
 
-ULTIMA_LINHA        EQU 8
-CONST_DECIMAL       EQU 10H
-CONST_DECIMAL_DEZ   EQU 100H
-CONST_DEC           EQU 4
-CONST_INC           EQU 5
-CONST_MOVE_AST      EQU 6
-CONST_MOVE_SONDA    EQU 1
-DISPLAYS            EQU 0A000H  ; endereço dos displays de 7 segmentos (periférico POUT-1)
-TEC_LIN             EQU 0C000H  ; endereço das linhas do teclado (periférico POUT-2)
-TEC_COL             EQU 0E000H  ; endereço das colunas do teclado (periférico PIN)
-LINHA_TEC           EQU 1       ; linha inicial a testar
-MASCARA             EQU 0FH     ; para isolar os 4 bits de menor peso, ao ler as colunas do teclado
+ULTIMA_LINHA            EQU 8
+CONST_DECIMAL           EQU 10H
+CONST_DECIMAL_DEZ       EQU 100H
+TECLA_DEC               EQU 4
+TECLA_INC               EQU 5
+TECLA_MOVE_AST          EQU 6
+TECLA_MOVE_SONDA        EQU 1
+DISPLAYS                EQU 0A000H  ; endereço dos displays de 7 segmentos (periférico POUT-1)
+TEC_LIN                 EQU 0C000H  ; endereço das linhas do teclado (periférico POUT-2)
+TEC_COL                 EQU 0E000H  ; endereço das colunas do teclado (periférico PIN)
+LINHA_TEC               EQU 1       ; linha inicial a testar
+MASCARA                 EQU 0FH     ; para isolar os 4 bits de menor peso, ao ler as colunas do teclado
 
+
+; Comandos
 
 COMANDOS				EQU	6000H			; endereço de base dos comandos do MediaCenter
 
@@ -47,8 +49,11 @@ DEFINE_PIXEL    		EQU COMANDOS + 12H		; endereço do comando para escrever um pix
 APAGA_AVISO     		EQU COMANDOS + 40H		; endereço do comando para apagar o aviso de nenhum cenário selecionado
 APAGA_ECRÃ	 		    EQU COMANDOS + 02H		; endereço do comando para apagar todos os pixels já desenhados
 SELECIONA_CENARIO_FUNDO EQU COMANDOS + 42H		; endereço do comando para selecionar uma imagem de fundo
+SELECIONA_ECRA          EQU COMANDOS + 04H		; endereço do comando para selecionar um ecra
 INICIA_SOM              EQU COMANDOS + 5AH		; endereço do comando para iniciar o som de um asteroide
 ATRASO			        EQU	400H		        ; atraso para limitar a velocidade de movimento do boneco
+
+; Dimensoes
 
 LARGURA_AST			    EQU	5			; largura do boneco
 ALTURA_AST			    EQU	5			; altura do boneco
@@ -59,6 +64,7 @@ COLUNA_NAVE             EQU 24
 COLUNA_SONDA            EQU 32
 
 
+; Cores
 
 VERDE   			    EQU	0F0F0H		; cor do pixel: verde em ARGB (opaco e vermelho no máximo, verde e azul a 0)
 CINZENTO_CLARO   	    EQU	0FCCCH		; cor do pixel: cinzento-claro em ARGB (opaco e vermelho no máximo, verde e azul a 0)
@@ -73,28 +79,28 @@ AMARELO   			    EQU	0FFF0H		; cor do pixel: verde em ARGB (opaco e vermelho no 
 
 
 
-; **********************************************************************
+; *****************************************************************************
 ; * Dados
-; **********************************************************************
+; *****************************************************************************
 
-PLACE              1000H
-inicio_pilha:      STACK 100H ; reserva espaco para a pilha
+PLACE                   1000H
+inicio_pilha:           STACK 100H ; reserva espaco para a pilha
 SP_inicial:
 
-valor_display:     WORD  0   ; variavel que guarda o valor do display
-tecla_carregada:   WORD  0   ; variavel que guarda a tecla que se encontra carregada
-limite_uni_sup:    WORD  0AH
-limite_uni_inf:    WORD  0
-limite_dez_sup:    WORD  99H
-limite_dez_inf:    WORD  0
-linha_asteroide:   WORD  0   ; variavel que guarda a linha do asteroide
-coluna_asteroide:  WORD  0   ; variavel que guarda a coluna do asteroide
-linha_sonda:       WORD  23  ; variavel que guarda a linha da sonda
+valor_display:          WORD  0   ; variavel que guarda o valor do display
+tecla_carregada:        WORD  0   ; variavel que guarda a tecla que se encontra carregada
+limite_uni_sup:         WORD  0AH
+limite_uni_inf:         WORD  0
+limite_dez_sup:         WORD  99H
+limite_dez_inf:         WORD  0
+linha_asteroide:        WORD  0   ; variavel que guarda a linha do asteroide
+coluna_asteroide:       WORD  0   ; variavel que guarda a coluna do asteroide
+linha_sonda:            WORD  23  ; variavel que guarda a linha da sonda
 
 
-PLACE		0500H				
+PLACE		            0500H				
 
-DEF_ASTEROIDE:					; tabela que define o asteroide 
+DEF_ASTEROIDE:				; tabela que define o asteroide 
 	WORD		LARGURA_AST, ALTURA_AST
 	WORD		0,     VERDE, VERDE, VERDE,     0
 	WORD		VERDE, VERDE, VERDE, VERDE, VERDE
@@ -127,16 +133,16 @@ PLACE      0
 inicio:
 
 ; inicializações
-    MOV  SP, SP_inicial ; inicializa SP
-    MOV  R3, DISPLAYS   ; endereço do periférico dos displays
-    MOV  R4, LINHA_TEC      ; começa-se a testar a primeira linha
-    MOV  [R3], R1       ; escreve linha e coluna a zero nos displays
-    MOV  [APAGA_AVISO], R1	; apaga o aviso de nenhum cenário selecionado (o valor de R1 não é relevante)
-    MOV  [APAGA_ECRÃ], R1	; apaga todos os pixels já desenhados (o valor de R1 não é relevante)
-    MOV	 R1, 0			; cenário de fundo número 0
+    MOV  SP, SP_inicial                 ; inicializa SP
+    MOV  R3, DISPLAYS                   ; endereço do periférico dos displays
+    MOV  R4, LINHA_TEC                  ; começa-se a testar a primeira linha
+    MOV  [R3], R1                       ; escreve linha e coluna a zero nos displays
+    MOV  [APAGA_AVISO], R1	            ; apaga o aviso de nenhum cenário selecionado (o valor de R1 não é relevante)
+    MOV  [APAGA_ECRÃ], R1	            ; apaga todos os pixels já desenhados (o valor de R1 não é relevante)
+    MOV	 R1, 0			                ; cenário de fundo número 0
     MOV  [SELECIONA_CENARIO_FUNDO], R1	; seleciona o cenário de fundo
-    CALL desenha_nave 
-    CALL desenha_asteroide      ; depois fazer etc
+    CALL desenha_nave                   ; desenha a nave
+    CALL desenha_asteroide              ; desenha o asteroide
      
 
 
@@ -272,13 +278,13 @@ avalia_tecla:
     PUSH R1
     PUSH R2
     MOV  R1, [tecla_carregada]
-    CMP  R1, CONST_INC
+    CMP  R1, TECLA_INC
     JZ   avalia_tecla_1
-    CMP  R1, CONST_DEC
+    CMP  R1, TECLA_DEC
     JZ   avalia_tecla_2
-    CMP  R1, CONST_MOVE_AST
+    CMP  R1, TECLA_MOVE_AST
     JZ   avalia_tecla_3
-    CMP  R1, CONST_MOVE_SONDA              ; se nao for nenhuma daquelas teclas
+    CMP  R1, TECLA_MOVE_SONDA              ; se nao for nenhuma daquelas teclas
     JZ   avalia_tecla_4
     JMP  continuacao
 
@@ -471,6 +477,10 @@ desenha_asteroide:
     PUSH R4
     PUSH R5
     PUSH R6
+    PUSH R7
+
+    MOV R7, 0
+    MOV [SELECIONA_ECRA], R7
 
     posição_boneco_1:
         MOV  R1, [linha_asteroide]			; linha do boneco
@@ -498,6 +508,7 @@ desenha_asteroide:
         MOV  R5, LARGURA_AST
         JNZ  preenche_linha
 
+    POP R7
     POP R6
     POP R5
     POP R4
@@ -600,6 +611,10 @@ desenha_nave:
     PUSH R4
     PUSH R5
     PUSH R6
+    PUSH R7
+
+    MOV R7, 1
+    MOV [SELECIONA_ECRA], R7
 
     posição_nave:
         MOV  R1, LINHA_NAVE			; linha do boneco
@@ -627,7 +642,7 @@ desenha_nave:
         MOV  R5, LARGURA_NAVE
         JNZ  preenche_linha_2
 
-
+    POP R7
     POP R6
     POP R5
     POP R4
@@ -638,7 +653,7 @@ desenha_nave:
 
 
 ; *****************************************************************************
-; move_sonda:  Move uma sonda;
+; move_sonda:  Move a sonda;
 ;
 ; Entrada(s): ---
 ;
@@ -686,11 +701,3 @@ desenha_nave:
         POP R1
         RET
 
-; *****************************************************************************
-; converte_decimal:  Converte o valor do display de hexadecimal para decimal;
-;
-; Entrada(s): ---
-;
-; Saida(s): ---	
-;
-; *****************************************************************************
