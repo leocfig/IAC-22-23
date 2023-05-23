@@ -27,6 +27,7 @@
 
 ULTIMA_LINHA        EQU 8
 CONST_DECIMAL       EQU 10H
+CONST_DECIMAL_DEZ   EQU 100H
 CONST_DEC           EQU 4
 CONST_INC           EQU 5
 CONST_MOVE_AST      EQU 6
@@ -84,12 +85,14 @@ valor_display:     WORD  0   ; variavel que guarda o valor do display
 tecla_carregada:   WORD  0   ; variavel que guarda a tecla que se encontra carregada
 limite_uni_sup:    WORD  0AH
 limite_uni_inf:    WORD  0
+limite_dez_sup:    WORD  99H
+limite_dez_inf:    WORD  0
 linha_asteroide:   WORD  0   ; variavel que guarda a linha do asteroide
 coluna_asteroide:  WORD  0   ; variavel que guarda a coluna do asteroide
 linha_sonda:       WORD  23  ; variavel que guarda a linha da sonda
 
 
-PLACE		0300H				
+PLACE		0500H				
 
 DEF_ASTEROIDE:					; tabela que define o asteroide 
 	WORD		LARGURA_AST, ALTURA_AST
@@ -315,19 +318,35 @@ incrementa:
     PUSH R4
     PUSH R5
     PUSH R6
+    PUSH R7
+    PUSH R8
+    PUSH R9
+    PUSH R10
+    PUSH R11
 
     MOV  R1, [valor_display]
     MOV  R5, [limite_uni_sup]
     MOV  R6, [limite_uni_inf]
+    MOV  R7, [limite_dez_sup]
+    MOV  R8, [limite_dez_inf]
+    MOV  R9, CONST_DECIMAL_DEZ
     MOV  R4, CONST_DECIMAL
+    CMP  R1, R7
+    JZ   incrementa_decimal_dez
     INC  R1
     CMP  R1, R5 
     JZ   incrementa_decimal
+    
 
     passa_display_1:
     MOV  [valor_display], R1
     MOV  [R3], R1
 
+    POP  R11
+    POP  R10
+    POP  R9
+    POP  R8
+    POP  R7
     POP  R6
     POP  R5
     POP  R4
@@ -341,6 +360,22 @@ incrementa:
     MOV  [limite_uni_sup], R5
     MOV  [limite_uni_inf], R6    
     
+    JMP  passa_display_1
+
+    incrementa_decimal_dez:
+    MOV  R10, 103
+    MOV  R11, 144
+    ADD  R1, R10
+    ADD  R7, R9
+    ADD  R8, R9
+    MOV  [limite_dez_sup], R7
+    MOV  [limite_dez_inf], R8
+    ADD  R5, R9
+    SUB  R5, R11
+    ADD  R6, R9
+    MOV  [limite_uni_sup], R5
+    MOV  [limite_uni_inf], R6 
+
     JMP  passa_display_1
 
 
@@ -359,19 +394,34 @@ decrementa:
     PUSH R4
     PUSH R5
     PUSH R6
+    PUSH R7
+    PUSH R8
+    PUSH R9
+    PUSH R10
+    PUSH R11
 
     MOV  R1, [valor_display]
     MOV  R5, [limite_uni_sup]
     MOV  R6, [limite_uni_inf]
     MOV  R4, CONST_DECIMAL
-    DEC  R1
+    MOV  R7, [limite_dez_sup]
+    MOV  R8, [limite_dez_inf]
+    MOV  R9, CONST_DECIMAL_DEZ
     CMP  R1, R6
     JZ   decrementa_decimal
+    CMP  R1, R8
+    JZ   decrementa_decimal_dez
+    DEC R1
 
     passa_display_2:
     MOV  [valor_display], R1
     MOV  [R3], R1
 
+    POP  R11
+    POP  R10
+    POP  R9
+    POP  R8
+    POP  R7
     POP  R6
     POP  R5
     POP  R4
@@ -380,13 +430,30 @@ decrementa:
 
 
     decrementa_decimal:
-        SUB  R1, 6
+        SUB  R1, 7
         SUB  R5, R4
         SUB  R6, R4
         MOV  [limite_uni_sup], R5
         MOV  [limite_uni_inf], R6    
         
         JMP  passa_display_2
+
+    decrementa_decimal_dez:
+        MOV  R10, 103
+        MOV  R11, 144
+        SUB  R1, R10
+        SUB  R7, R9
+        SUB  R8, R9
+        MOV  [limite_dez_sup], R7
+        MOV  [limite_dez_inf], R8
+        SUB  R5, R9
+        ADD  R5, R11
+        SUB  R6, R9
+        MOV  [limite_uni_sup], R5
+        MOV  [limite_uni_inf], R6 
+
+    JMP  passa_display_1
+
 
 ; *****************************************************************************
 ; desenha_asteroide:  Desenha um asteroide
