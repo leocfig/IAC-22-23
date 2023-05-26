@@ -88,10 +88,10 @@ SP_inicial:
 
 valor_display:          WORD  0           ; variavel que guarda o valor do display
 tecla_carregada:        WORD  0           ; variavel que guarda a tecla que se encontra carregada
-limite_uni_sup:         WORD  0AH         ; ...?
-limite_uni_inf:         WORD  0           ; ...?
-limite_dez_sup:         WORD  99H         ; ...?
-limite_dez_inf:         WORD  0           ; ...?
+limite_uni_sup:         WORD  0AH         ; variavel que guarda o valor a partir do qual o valor das unidades aumenta e deixa de ser decimal
+limite_uni_inf:         WORD  0           ; variavel que guarda o valor a partir do qual o valor das unidades diminui e deixa de ser decimal
+limite_dez_sup:         WORD  99H         ; variavel que guarda o valor a partir do qual o valor das dezenas aumenta e deixa de ser decimal
+limite_dez_inf:         WORD  0           ; variavel que guarda o valor a partir do qual o valor das dezenas diminui e deixa de ser decimal
 linha_asteroide:        WORD  0           ; variavel que guarda a linha do asteroide
 coluna_asteroide:       WORD  0           ; variavel que guarda a coluna do asteroide
 linha_sonda:            WORD  23          ; variavel que guarda a linha da sonda
@@ -345,19 +345,18 @@ incrementa:
 
     MOV  R1, [valor_display]        ; guarda-se o valor do display num registo
     MOV  R5, [limite_uni_sup]       ; guarda-se o valor dos limites inferiores
-    MOV  R6, [limite_uni_inf]       ; e superiores das unidades e dezenas em registos
-    MOV  R6, [limite_uni_inf]
-    MOV  R7, [limite_dez_sup]
-    MOV  R8, [limite_dez_inf]
+    MOV  R6, [limite_uni_inf]       ; e superiores das unidades e dezenas em registo  		
+    MOV  R7, [limite_dez_sup]	    ; guarda-se o valor dos limites superiores e
+    MOV  R8, [limite_dez_inf]	    ; inferiores das dezenas em registos
     MOV  R4, CONST_UNIDADES
     MOV  R9, CONST_DEZENAS
-    CMP  R1, R7                     ; se o valor do display tem o valor
+    CMP  R1, R7                     ; verifica se o valor do display tem o valor
                                     ; igual ao do limite superior das dezenas
-    JZ   incrementa_dezenas         ; vai ...?
+    JZ   incrementa_dezenas         ; 
     INC  R1                         ; se não, incrementa 1
     CMP  R1, R5                     ; se o valor do display tem o valor
                                     ; igual ao do limite superior das unidades
-    JZ   incrementa_unidades        ; vai ...?
+    JZ   incrementa_unidades        ; 
     
 
     passa_display_1:
@@ -378,12 +377,12 @@ incrementa:
     incrementa_unidades:
         ADD  R1, SEIS               ; adiciona 6 (pois ...?)de modo a passar de 
                                     ; hexadecimal para decimal no display
-        ADD  R5, R4                 ; adiciona 10H aos limites superiores de unidade,
-        ADD  R6, R4                 ; pois ...?
-        MOV  [limite_uni_sup], R5   ; atualiza os limites das unidades
-        MOV  [limite_uni_inf], R6    
+        ADD  R5, R4                 ; adiciona 10H aos limite superior de unidade,
+        ADD  R6, R4                 ; adiciona 10H aos limite inferior de unidade
+        MOV  [limite_uni_sup], R5   ; atualiza os limite das unidades
+        MOV  [limite_uni_inf], R6   ; atualiza os limite das unidades
         
-        JMP  passa_display_1        ; para ...?
+        JMP  passa_display_1        
 
     incrementa_dezenas:
         MOV  R10, CENTO_TRES             ; o que temos de adicionar para passar
@@ -394,13 +393,13 @@ incrementa:
         ADD  R8, R9                      ; e inferiores das dezenas para ...?
         MOV  [limite_dez_sup], R7        ; atualiza os limites das dezenas
         MOV  [limite_dez_inf], R8
-        ADD  R5, R9                      ; ...?
-        SUB  R5, R11                     ; ...?
-        ADD  R6, R9                      ; ...?
+        ADD  R5, R9                      ; adiciona 99H ao limite superior das unidades
+        SUB  R5, R11                     ; ajusta o limite superior das unidades
+        ADD  R6, R9                      ; adiciona 99 H ao limite inferior das dezenas
         MOV  [limite_uni_sup], R5        ; atualizamos os limites das unidade
         MOV  [limite_uni_inf], R6 
 
-        JMP  passa_display_1             ; para ...?
+        JMP  passa_display_1             
 
 
 
@@ -433,11 +432,11 @@ decrementa:
     MOV  R9, CONST_DEZENAS
     CMP  R1, R6                            ; se o valor do display tem o valor
                                            ; igual ao do limite inferior das unidades
-    JZ   decrementa_decimal                ; vai ...?
+    JZ   decrementa_decimal                
     CMP  R1, R8                            ; se o valor do display tem o valor
                                            ; igual ao do limite inferior das dezenas
-    JZ   decrementa_decimal_dez            ; vai ...?
-    DEC R1                                 ; para ...?
+    JZ   decrementa_decimal_dez            
+    DEC R1                                 ; diminui o valor do display em uma unidade
 
     passa_display_2:
         MOV  [valor_display], R1           ; passa o valor (já decrementado) para o display
@@ -459,28 +458,30 @@ decrementa:
         SUB  R1, SETE                      ; decrementa 7 (pois ...?) de modo a 
                                            ; passar de hexadecimal para decimal
         SUB  R5, R4                        ; retira 10H aos limites das unidades
-        SUB  R6, R4                        ; pois ...?
+        SUB  R6, R4                        ; para que o limite acompanhe o estado do display
         MOV  [limite_uni_sup], R5          ; atualiza os limites das unidades
         MOV  [limite_uni_inf], R6    
         
-        JMP  passa_display_2               ; para ...?
+        JMP  passa_display_2               
 
     decrementa_decimal_dez:
         MOV  R10, CENTO_TRES               ; o que temos de subtrair para passar
-                                           ; de 99 para 100 em hexadecimal, pois...?
-        MOV  R11, CENTO_QUARENTA_QUATRO    ; o que temos de ... pois ...?
+                                           ; de 99 para 100 em hexadecimal, 
+        MOV  R11, CENTO_QUARENTA_QUATRO    ; o que temos de adicionar ao limite das unidades para 
+					   ; que acompanhe a transicao para a centena acima
         SUB  R1, R10
         SUB  R7, R9                        ; retira 100H aos limites superiores
-        SUB  R8, R9                        ; e inferiores das dezenas para ...?
+        SUB  R8, R9                        ; e inferiores das dezenas para 
+					   ; acompanhar a transicao de centena
         MOV  [limite_dez_sup], R7          ; atualiza os limites das dezenas
         MOV  [limite_dez_inf], R8
-        SUB  R5, R9                        ; ...?
-        ADD  R5, R11                       ; ...?
-        SUB  R6, R9                        ; ...?
+        SUB  R5, R9                        ; subtrai 99H ao limite superior das unidades
+        ADD  R5, R11                       ; ajusta o limite superior das unidades
+        SUB  R6, R9                        ; adiciona 99 H ao limite inferior das dezenas
         MOV  [limite_uni_sup], R5          ; atualizamos os limites das unidade
         MOV  [limite_uni_inf], R6 
 
-    JMP  passa_display_1                   ; para ...?
+    JMP  passa_display_1                   
 
 
 ; *****************************************************************************
