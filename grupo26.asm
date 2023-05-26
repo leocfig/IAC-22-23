@@ -12,20 +12,17 @@
 ; *********************************************************************
 
 
-; Tarefas a fazer:
-; - comentarios
-; - por constantes daqueles nr do inc e dec
-
-
-
 ; **********************************************************************
 ; * Constantes
 ; **********************************************************************
 
 
-ULTIMA_LINHA            EQU 8           ; número da última linha
-CONST_DECIMAL           EQU 10H
-CONST_DECIMAL_DEZ       EQU 100H
+CONST_UNIDADES          EQU 10H         ; ...?
+CONST_DEZENAS           EQU 100H        ; ...?
+SEIS                    EQU 6
+SETE                    EQU 7
+CENTO_TRES              EQU 103
+CENTO_QUARENTA_QUATRO   EQU 144
 TECLA_DEC               EQU 4           ; tecla para decrementar contador
 TECLA_INC               EQU 5           ; tecla para incrementar contador
 TECLA_MOVE_AST          EQU 6           ; tecla que move o asteroide
@@ -34,7 +31,9 @@ DISPLAYS                EQU 0A000H      ; endereço dos displays de 7 segmentos 
 TEC_LIN                 EQU 0C000H      ; endereço das linhas do teclado (periférico POUT-2)
 TEC_COL                 EQU 0E000H      ; endereço das colunas do teclado (periférico PIN)
 LINHA_INICIAL           EQU 1           ; linha inicial do teclado a testar
-MASCARA                 EQU 0FH         ; para isolar os 4 bits de menor peso, ao ler as colunas do teclado
+ULTIMA_LINHA            EQU 8           ; número da última linha do teclado
+MASCARA                 EQU 0FH         ; para isolar os 4 bits de menor peso,
+                                        ; ao ler as colunas do teclado
 ATRASO			        EQU	400H		; atraso para limitar a velocidade de movimento do boneco
 
 
@@ -45,7 +44,8 @@ COMANDOS				EQU	6000H			    ; endereço de base dos comandos do MediaCenter
 DEFINE_LINHA    		EQU COMANDOS + 0AH		; endereço do comando para definir a linha
 DEFINE_COLUNA   		EQU COMANDOS + 0CH		; endereço do comando para definir a coluna
 DEFINE_PIXEL    		EQU COMANDOS + 12H		; endereço do comando para escrever um pixel
-APAGA_AVISO     		EQU COMANDOS + 40H		; endereço do comando para apagar o aviso de nenhum cenário selecionado
+APAGA_AVISO     		EQU COMANDOS + 40H		; endereço do comando para apagar o aviso 
+                                                ; de nenhum cenário selecionado
 APAGA_ECRÃ	 		    EQU COMANDOS + 02H		; endereço do comando para apagar todos os pixels já desenhados
 SELECIONA_CENARIO_FUNDO EQU COMANDOS + 42H		; endereço do comando para selecionar uma imagem de fundo
 SELECIONA_ECRA          EQU COMANDOS + 04H		; endereço do comando para selecionar um ecra
@@ -88,10 +88,10 @@ SP_inicial:
 
 valor_display:          WORD  0           ; variavel que guarda o valor do display
 tecla_carregada:        WORD  0           ; variavel que guarda a tecla que se encontra carregada
-limite_uni_sup:         WORD  0AH
-limite_uni_inf:         WORD  0
-limite_dez_sup:         WORD  99H
-limite_dez_inf:         WORD  0
+limite_uni_sup:         WORD  0AH         ; ...?
+limite_uni_inf:         WORD  0           ; ...?
+limite_dez_sup:         WORD  99H         ; ...?
+limite_dez_inf:         WORD  0           ; ...?
 linha_asteroide:        WORD  0           ; variavel que guarda a linha do asteroide
 coluna_asteroide:       WORD  0           ; variavel que guarda a coluna do asteroide
 linha_sonda:            WORD  23          ; variavel que guarda a linha da sonda
@@ -116,7 +116,7 @@ DEF_NAVE:		; tabela que define a nave ; a nave inclui a sonda na posicao inicial
 	WORD		0, 0, QUASE_PRETO, 0, 0, 0, 0, CINZENTO_CLARO, AZUL_CLARO, CINZENTO_CLARO, 0, 0, 0, 0, QUASE_PRETO, 0, 0
 	WORD		0, 0, CINZENTO_ESCURO, 0, 0, 0, CINZENTO_ESCURO, CINZENTO_CLARO, AZUL_ESCURO, CINZENTO_CLARO, CINZENTO_ESCURO, 0, 0, 0, CINZENTO_ESCURO, 0, 0
 	WORD		0, BRANCO, CINZENTO_ESCURO, BRANCO, 0, 0, CINZENTO_ESCURO, CINZENTO_CLARO, CINZENTO_ESCURO, CINZENTO_CLARO, CINZENTO_ESCURO, 0, 0, BRANCO, CINZENTO_ESCURO, BRANCO, 0
-	WORD		CINZENTO_ESCURO, BRANCO, CINZENTO_CLARO, BRANCO, CINZENTO_CLARO, CINZENTO_CLARO, CINZENTO_ESCURO, CINZENTO_CLARO, BRANCO, CINZENTO_CLARO, CINZENTO_ESCURO, CINZENTO_CLARO, CINZENTO_CLARO, BRANCO, CINZENTO_CLARO, BRANCO, CINZENTO_ESCURO 
+	WORD		CINZENTO_ESCURO, BRANCO, CINZENTO_CLARO, BRANCO, CINZENTO_CLARO, CINZENTO_CLARO, CINZENTO_ESCURO, CINZENTO_CLARO, BRANCO, CINZENTO_CLARO, CINZENTO_ESCURO, CINZENTO_CLARO, CINZENTO_CLARO, BRANCO, CINZENTO_CLARO, BRANCO, CINZENTO_ESCURO
 	WORD		CINZENTO_ESCURO, BRANCO, BRANCO, BRANCO, CINZENTO_CLARO, CINZENTO_ESCURO, CINZENTO_ESCURO, CINZENTO_CLARO, CINZENTO_CLARO, CINZENTO_CLARO, CINZENTO_ESCURO, CINZENTO_ESCURO, CINZENTO_CLARO, BRANCO, BRANCO, BRANCO, CINZENTO_ESCURO
 
     
@@ -135,8 +135,10 @@ inicio:
     MOV  R3, DISPLAYS                   ; endereço do periférico dos displays
     MOV  R4, LINHA_INICIAL              ; começa-se a testar a primeira linha
     MOV  [R3], R1                       ; escreve o valor 0 nos displays
-    MOV  [APAGA_AVISO], R1	            ; apaga o aviso de nenhum cenário selecionado (o valor de R1 não é relevante)
-    MOV  [APAGA_ECRÃ], R1	            ; apaga todos os pixels já desenhados (o valor de R1 não é relevante)
+    MOV  [APAGA_AVISO], R1	            ; apaga o aviso de nenhum cenário selecionado
+                                        ; (o valor de R1 não é relevante)
+    MOV  [APAGA_ECRÃ], R1	            ; apaga todos os pixels já desenhados 
+                                        ; (o valor de R1 não é relevante)
     MOV  [SELECIONA_CENARIO_FUNDO], R1	; seleciona o cenário de fundo número 0
     CALL desenha_nave                   ; desenha a nave
     CALL desenha_asteroide              ; desenha o asteroide
@@ -166,7 +168,8 @@ teclado:
         JZ   proxima_linha          ; nao havendo tecla premida
         CALL obtem_valor_tecla      ; se houver uma tecla premida, calcula-se o valor da tecla
         MOV  [tecla_carregada], R2  ; altera a variavel da "tecla_carregada" para a tecla premida
-        CALL avalia_tecla           ; avalia a tecla carregada e executa diferentes funcoes dependendo da tecla
+        CALL avalia_tecla           ; avalia a tecla carregada e executa
+                                    ; diferentes funcoes dependendo da tecla
         JMP  ha_tecla
     
     proxima_linha:
@@ -288,14 +291,14 @@ avalia_tecla:
     PUSH R1
     PUSH R2
     MOV  R1, [tecla_carregada]
-    CMP  R1, TECLA_INC                     ; se a tecla carregada for a tecla para incrementar contador
-    JZ   avalia_tecla_1
-    CMP  R1, TECLA_DEC                     ; se a tecla carregada for a tecla para decrementar contador
-    JZ   avalia_tecla_2
-    CMP  R1, TECLA_MOVE_AST                ; se a tecla carregada for a tecla para mover o asteroide
-    JZ   avalia_tecla_3
-    CMP  R1, TECLA_MOVE_SONDA              ; se a tecla carregada for a tecla para mover a sonda
-    JZ   avalia_tecla_4
+    CMP  R1, TECLA_INC                     ; se a tecla carregada for a tecla 
+    JZ   avalia_tecla_1                    ; para incrementar contador
+    CMP  R1, TECLA_DEC                     ; se a tecla carregada for a tecla
+    JZ   avalia_tecla_2                    ; para decrementar contador
+    CMP  R1, TECLA_MOVE_AST                ; se a tecla carregada for a tecla 
+    JZ   avalia_tecla_3                    ; para mover o asteroide
+    CMP  R1, TECLA_MOVE_SONDA              ; se a tecla carregada for a tecla
+    JZ   avalia_tecla_4                    ; para mover a sonda
     JMP  sai_avalia_tecla                  ; se nao for nenhuma daquelas teclas
 
 
@@ -321,7 +324,7 @@ avalia_tecla:
 
 
 ; *****************************************************************************
-; INCREMENTA:   Incrementa uma unidade no display
+; INCREMENTA:   Incrementa uma unidade decimal no display
 ;
 ; Entrada(s):   [valor_display]
 ;
@@ -340,64 +343,69 @@ incrementa:
     PUSH R10
     PUSH R11
 
-    MOV  R1, [valor_display]               ; passa o valor do display para um registo
-    MOV  R5, [limite_uni_sup]              ; próximas 4 linhas passam o valor dos limites inferiores e superior das unidades e dezenas para registos
+    MOV  R1, [valor_display]        ; guarda-se o valor do display num registo
+    MOV  R5, [limite_uni_sup]       ; guarda-se o valor dos limites inferiores
+    MOV  R6, [limite_uni_inf]       ; e superiores das unidades e dezenas em registos
     MOV  R6, [limite_uni_inf]
     MOV  R7, [limite_dez_sup]
     MOV  R8, [limite_dez_inf]
-    MOV  R9, CONST_DECIMAL_DEZ
-    MOV  R4, CONST_DECIMAL
-    CMP  R1, R7                            ; se o valor do display tem o valor das dezenas igual ao do limite superior de dezenas
-    JZ   incrementa_decimal_dez
-    INC  R1                                ; se não, incrementa 1
-    CMP  R1, R5                            ; se o valor do display tem o valor das unidades igual ao do limite superior de unidades
-    JZ   incrementa_decimal
+    MOV  R4, CONST_UNIDADES
+    MOV  R9, CONST_DEZENAS
+    CMP  R1, R7                     ; se o valor do display tem o valor
+                                    ; igual ao do limite superior das dezenas
+    JZ   incrementa_dezenas         ; vai ...?
+    INC  R1                         ; se não, incrementa 1
+    CMP  R1, R5                     ; se o valor do display tem o valor
+                                    ; igual ao do limite superior das unidades
+    JZ   incrementa_unidades        ; vai ...?
     
 
     passa_display_1:
-    MOV  [valor_display], R1               ; passa o valor de R1 (já incrementado) para o display
-    MOV  [R3], R1
+        MOV  [valor_display], R1    ; passa o valor de R1 (já incrementado) para o display
+        MOV  [R3], R1               ; escreve o valor nos displays
 
-    POP  R11
-    POP  R10
-    POP  R9
-    POP  R8
-    POP  R7
-    POP  R6
-    POP  R5
-    POP  R4
-    POP  R1
-    RET
+        POP  R11
+        POP  R10
+        POP  R9
+        POP  R8
+        POP  R7
+        POP  R6
+        POP  R5
+        POP  R4
+        POP  R1
+        RET
 
-    incrementa_decimal:
-    ADD  R1, 6                             ; adiciona 6 de modo a passar de hexadecimal para decimal no display
-    ADD  R5, R4                            ; adiciona 10H aos limites de unidade
-    ADD  R6, R4
-    MOV  [limite_uni_sup], R5
-    MOV  [limite_uni_inf], R6    
-    
-    JMP  passa_display_1
+    incrementa_unidades:
+        ADD  R1, SEIS               ; adiciona 6 (pois ...?)de modo a passar de 
+                                    ; hexadecimal para decimal no display
+        ADD  R5, R4                 ; adiciona 10H aos limites superiores de unidade,
+        ADD  R6, R4                 ; pois ...?
+        MOV  [limite_uni_sup], R5   ; atualiza os limites das unidades
+        MOV  [limite_uni_inf], R6    
+        
+        JMP  passa_display_1        ; para ...?
 
-    incrementa_decimal_dez:
-    MOV  R10, 103                          ; o que temos de adicionar para incrementar de 99 para 100 em hexadecimal
-    MOV  R11, 144
-    ADD  R1, R10
-    ADD  R7, R9                            ; adiciona 100H aos limites das dezenas
-    ADD  R8, R9
-    MOV  [limite_dez_sup], R7
-    MOV  [limite_dez_inf], R8
-    ADD  R5, R9
-    SUB  R5, R11
-    ADD  R6, R9
-    MOV  [limite_uni_sup], R5              ; mudamos os limites de unidade
-    MOV  [limite_uni_inf], R6 
+    incrementa_dezenas:
+        MOV  R10, CENTO_TRES             ; o que temos de adicionar para passar
+                                         ; de 99 para 100 em hexadecimal, pois...?
+        MOV  R11, CENTO_QUARENTA_QUATRO  ; o que temos de ... pois ...?
+        ADD  R1, R10
+        ADD  R7, R9                      ; adiciona 100H aos limites superiores
+        ADD  R8, R9                      ; e inferiores das dezenas para ...?
+        MOV  [limite_dez_sup], R7        ; atualiza os limites das dezenas
+        MOV  [limite_dez_inf], R8
+        ADD  R5, R9                      ; ...?
+        SUB  R5, R11                     ; ...?
+        ADD  R6, R9                      ; ...?
+        MOV  [limite_uni_sup], R5        ; atualizamos os limites das unidade
+        MOV  [limite_uni_inf], R6 
 
-    JMP  passa_display_1
+        JMP  passa_display_1             ; para ...?
 
 
 
 ; *****************************************************************************
-; DECREMENTA:   Decrementa uma unidade no display
+; DECREMENTA:   Decrementa uma unidade decimal no display
 ;
 ; Entrada(s):   [valor_display]
 ;
@@ -417,58 +425,62 @@ decrementa:
     PUSH R11
 
     MOV  R1, [valor_display]               ; passa o valor do display para um registo
-    MOV  R5, [limite_uni_sup]              ; próximas 4 linhas passam o valor dos limites inferiores e superior das unidades e dezenas para registos
-    MOV  R6, [limite_uni_inf]
+    MOV  R5, [limite_uni_sup]              ; guarda-se o valor dos limites inferiores
+    MOV  R6, [limite_uni_inf]              ; e superiores das unidades e dezenas em registos
     MOV  R7, [limite_dez_sup]
     MOV  R8, [limite_dez_inf]
-    MOV  R4, CONST_DECIMAL
-    MOV  R9, CONST_DECIMAL_DEZ
-    CMP  R1, R6                            ; verifica se o valor do display corresponde ao limite inferior das unidades
-    JZ   decrementa_decimal
-    CMP  R1, R8                            ; verifica se o valor do display corresponde ao limite inferior das dezenas
-    JZ   decrementa_decimal_dez
-    DEC R1
+    MOV  R4, CONST_UNIDADES
+    MOV  R9, CONST_DEZENAS
+    CMP  R1, R6                            ; se o valor do display tem o valor
+                                           ; igual ao do limite inferior das unidades
+    JZ   decrementa_decimal                ; vai ...?
+    CMP  R1, R8                            ; se o valor do display tem o valor
+                                           ; igual ao do limite inferior das dezenas
+    JZ   decrementa_decimal_dez            ; vai ...?
+    DEC R1                                 ; para ...?
 
     passa_display_2:
-    MOV  [valor_display], R1               ; passa o valor (já decrementado) para o display
-    MOV  [R3], R1
+        MOV  [valor_display], R1           ; passa o valor (já decrementado) para o display
+        MOV  [R3], R1                      ; escreve o valor nos displays
 
-    POP  R11
-    POP  R10
-    POP  R9
-    POP  R8
-    POP  R7
-    POP  R6
-    POP  R5
-    POP  R4
-    POP  R1
-    RET
+        POP  R11
+        POP  R10
+        POP  R9
+        POP  R8
+        POP  R7
+        POP  R6
+        POP  R5
+        POP  R4
+        POP  R1
+        RET
 
 
     decrementa_decimal:
-        SUB  R1, 7                         ; decrementa de forma especial devido à passagem de hexadecimal para decimal
+        SUB  R1, SETE                      ; decrementa 7 (pois ...?) de modo a 
+                                           ; passar de hexadecimal para decimal
         SUB  R5, R4                        ; retira 10H aos limites das unidades
-        SUB  R6, R4
-        MOV  [limite_uni_sup], R5
+        SUB  R6, R4                        ; pois ...?
+        MOV  [limite_uni_sup], R5          ; atualiza os limites das unidades
         MOV  [limite_uni_inf], R6    
         
-        JMP  passa_display_2
+        JMP  passa_display_2               ; para ...?
 
     decrementa_decimal_dez:
-        MOV  R10, 103
-        MOV  R11, 144
+        MOV  R10, CENTO_TRES               ; o que temos de subtrair para passar
+                                           ; de 99 para 100 em hexadecimal, pois...?
+        MOV  R11, CENTO_QUARENTA_QUATRO    ; o que temos de ... pois ...?
         SUB  R1, R10
-        SUB  R7, R9                        ; retira 100H aos limites das dezenas
-        SUB  R8, R9
-        MOV  [limite_dez_sup], R7
+        SUB  R7, R9                        ; retira 100H aos limites superiores
+        SUB  R8, R9                        ; e inferiores das dezenas para ...?
+        MOV  [limite_dez_sup], R7          ; atualiza os limites das dezenas
         MOV  [limite_dez_inf], R8
-        SUB  R5, R9
-        ADD  R5, R11
-        SUB  R6, R9
-        MOV  [limite_uni_sup], R5
+        SUB  R5, R9                        ; ...?
+        ADD  R5, R11                       ; ...?
+        SUB  R6, R9                        ; ...?
+        MOV  [limite_uni_sup], R5          ; atualizamos os limites das unidade
         MOV  [limite_uni_inf], R6 
 
-    JMP  passa_display_1
+    JMP  passa_display_1                   ; para ...?
 
 
 ; *****************************************************************************
@@ -492,20 +504,25 @@ desenha_asteroide:
     MOV R7, 0
     MOV [SELECIONA_ECRA], R7             ; seleciona o ecrã 0
 
+    ; posição do asteroide:
     MOV  R1, [linha_asteroide]			 ; linha do asteroide
     MOV  R2, [coluna_asteroide]		     ; coluna do asteroide
 
     ; obtem os parametos do asteroide a partir da tabela:
-    MOV	R4, DEF_ASTEROIDE		         ; endereço da tabela que define o asteroide que é também o endereço da LARGURA_AST
+    MOV	R4, DEF_ASTEROIDE		         ; endereço da tabela que define o asteroide 
+                                         ; que é também o endereço da LARGURA_AST
     MOV	R5, [R4]                         ; obtém a largura do asteroide
-    ADD	R4, 2			                 ; endereço da ALTURA_AST que define o asteroide (2 porque a LARGURA_AST é uma word)
+    ADD	R4, 2			                 ; endereço da ALTURA_AST que define o asteroide 
+                                         ; (2 porque a LARGURA_AST é uma word)
     MOV	R6, [R4]			             ; obtém a altura do asteroide
-    ADD	R4, 2			                 ; endereço da cor do 1º pixel (2 porque a ALTURA_AST é uma word)
+    ADD	R4, 2			                 ; endereço da cor do 1º pixel 
+                                         ; (2 porque a ALTURA_AST é uma word)
 
     preenche_linhas:
         MOV	 R3, [R4]			         ; obtém a cor do próximo pixel do asteroide
         CALL escreve_pixel               ; preenche o determinado pixel
-        ADD	 R4, 2			             ; endereço da cor do próximo pixel (2 porque cada cor de pixel é uma word)
+        ADD	 R4, 2			             ; endereço da cor do próximo pixel 
+                                         ; (2 porque cada cor de pixel é uma word)
         INC  R2                          ; próxima coluna
         DEC  R5 			             ; menos uma coluna para tratar
         JNZ  preenche_linhas             ; continua até percorrer toda a largura do objeto
@@ -547,7 +564,8 @@ desenha_asteroide:
         MOV R7, 0
         MOV [INICIA_SOM], R7           ; inicia o som 0
 
-        CALL atraso 		           ; atraso para limitar a velocidade de movimento do asteroide		
+        CALL atraso 		           ; atraso para limitar a velocidade
+                                       ; de movimento do asteroide	
 
         ; posição do asteroide:
         MOV  R1, [linha_asteroide]	   ; linha do asteroide
@@ -601,16 +619,20 @@ desenha_nave:
     MOV  R2, COLUNA_NAVE		  ; coluna da nave
 
     ; obtem os parametros da nave a partir da tabela
-    MOV	R4, DEF_NAVE		      ; endereço da tabela que define a nave que é também o endereço da LARGURA_NAVE
+    MOV	R4, DEF_NAVE		      ; endereço da tabela que define a nave que
+                                  ; é também o endereço da LARGURA_NAVE
     MOV	R5, [R4]                  ; obtém a largura da nave
-    ADD	R4, 2			          ; endereço da ALTURA_NAVE que define a nave (2 porque a LARGURA_NAVE é uma word)
+    ADD	R4, 2			          ; endereço da ALTURA_NAVE que define a nave 
+                                  ; (2 porque a LARGURA_NAVE é uma word)
     MOV	R6, [R4]			      ; obtém a altura da nave
-    ADD	R4, 2			          ; endereço da cor do 1º pixel (2 porque a ALTURA_NAVE é uma word)
+    ADD	R4, 2			          ; endereço da cor do 1º pixel 
+                                  ; (2 porque a ALTURA_NAVE é uma word)
 
     preenche_linha:
         MOV	 R3, [R4]			  ; obtém a cor do próximo pixel da nave
         CALL escreve_pixel        ; preenche o determinado pixel
-        ADD	 R4, 2			      ; endereço da cor do próximo pixel (2 porque cada cor de pixel é uma word)
+        ADD	 R4, 2			      ; endereço da cor do próximo pixel 
+                                  ; (2 porque cada cor de pixel é uma word)
         INC  R2                   ; próxima coluna
         DEC  R5 			      ; menos uma coluna para tratar
         JNZ  preenche_linha       ; continua até percorrer toda a largura da nave
@@ -645,26 +667,27 @@ move_sonda:
     PUSH R3
     PUSH R4
 
-    CALL atraso		                    ; atraso para limitar a velocidade de movimento da sonda	
+    CALL atraso		                ; atraso para limitar a velocidade
+                                    ; de movimento da sonda	
 
     MOV R4, 1
-    MOV [SELECIONA_ECRA], R4            ; seleciona o ecrã 1
+    MOV [SELECIONA_ECRA], R4        ; seleciona o ecrã 1
 
     ; posição da sonda:
-    MOV  R1, [linha_sonda]	            ; linha da sonda
-    MOV  R2, COLUNA_SONDA	            ; coluna da sonda
+    MOV  R1, [linha_sonda]	        ; linha da sonda
+    MOV  R2, COLUNA_SONDA	        ; coluna da sonda
     
     ; apaga a sonda:
-    MOV	 R3, 0			                ; obtém a cor do próximo pixel da sonda (transparente neste caso)
+    MOV	 R3, 0			            ; obtém a cor do próximo pixel da sonda (transparente neste caso)
     CALL escreve_pixel
 
     ; decrementa a linha da sonda:
-    MOV  R1, [linha_sonda]	            ; linha da sonda
+    MOV  R1, [linha_sonda]	        ; linha da sonda
     DEC  R1
     MOV  [linha_sonda], R1
 
     ; desenhar a sonda:
-    MOV	 R3, AMARELO	                ; obtém a cor do próximo pixel da sonda
+    MOV	 R3, AMARELO	            ; obtém a cor do próximo pixel da sonda
     CALL escreve_pixel
 
     POP R4
@@ -687,9 +710,11 @@ move_sonda:
 apaga_asteroide:
 
     ; obtem os parametros do asteroide a partir da tabela:
-    MOV	R4, DEF_ASTEROIDE	            ; endereço da tabela que define o asteroide que é também o endereço da LARGURA_AST
+    MOV	R4, DEF_ASTEROIDE	            ; endereço da tabela que define o asteroide
+                                        ; que é também o endereço da LARGURA_AST
     MOV	R5, [R4]                        ; obtém a largura do asteroide
-    ADD	R4, 2			                ; endereço da ALTURA_AST que define o asteroide (2 porque a LARGURA_AST é uma word)
+    ADD	R4, 2			                ; endereço da ALTURA_AST que define o asteroide 
+                                        ; (2 porque a LARGURA_AST é uma word)
     MOV	R6, [R4]			            ; obtém a altura do asteroide
 
     apaga_linhas:
