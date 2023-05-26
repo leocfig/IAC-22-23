@@ -17,8 +17,10 @@
 ; **********************************************************************
 
 
-CONST_UNIDADES          EQU 10H         ; ...?
-CONST_DEZENAS           EQU 100H        ; ...?
+CONST_UNIDADES          EQU 10H         ; constante que se adiciona ou subtrai
+					; aos limites quando se muda de dezena
+CONST_DEZENAS           EQU 100H        ; constante que se adiciona ou subtrai 
+					; aos limite quando se muda de centena
 SEIS                    EQU 6
 SETE                    EQU 7
 CENTO_TRES              EQU 103
@@ -375,7 +377,7 @@ incrementa:
         RET
 
     incrementa_unidades:
-        ADD  R1, SEIS               ; adiciona 6 (pois ...?)de modo a passar de 
+        ADD  R1, SEIS               ; adiciona 6 (10H- 0AH)de modo a passar de 
                                     ; hexadecimal para decimal no display
         ADD  R5, R4                 ; adiciona 10H aos limite superior de unidade,
         ADD  R6, R4                 ; adiciona 10H aos limite inferior de unidade
@@ -386,11 +388,13 @@ incrementa:
 
     incrementa_dezenas:
         MOV  R10, CENTO_TRES             ; o que temos de adicionar para passar
-                                         ; de 99 para 100 em hexadecimal, pois...?
-        MOV  R11, CENTO_QUARENTA_QUATRO  ; o que temos de ... pois ...?
+                                         ; de 99 para 100 em hexadecimal, (100H- 9AH)
+        MOV  R11, CENTO_QUARENTA_QUATRO  ; o que temos de adicionar para que os limites
+					 ; acompanhem a transicao de centena?
         ADD  R1, R10
         ADD  R7, R9                      ; adiciona 100H aos limites superiores
-        ADD  R8, R9                      ; e inferiores das dezenas para ...?
+        ADD  R8, R9                      ; e inferiores das dezenas para que acompanhem
+					 ; a transicao de centena
         MOV  [limite_dez_sup], R7        ; atualiza os limites das dezenas
         MOV  [limite_dez_inf], R8
         ADD  R5, R9                      ; adiciona 99H ao limite superior das unidades
