@@ -1037,7 +1037,7 @@ gerar_asteroide:
 
 decrementa_energia_3:
     PUSH R4
-    PUDH R5
+    PUsH R5
     
     MOV  R5, 4
     ciclo_decrementa_3:
