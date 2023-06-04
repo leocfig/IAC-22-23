@@ -1039,7 +1039,7 @@ decrementa_energia_3:
     PUSH R4
     PUsH R5
     
-    MOV  R5, 4
+    MOV  R5, 3
     ciclo_decrementa_3:
     SUB  R5, 1
     ;MOV  R4, [valor_display_dec]
