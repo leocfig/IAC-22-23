@@ -1049,7 +1049,7 @@ decrementa_energia_3:
     JNZ  ciclo_decrementa_3
     ;CALL converte_decimal
     ;MOV  R1, DISPLAYS               ; endereço do periférico dos displays
-    MOV  [R1], R1                  ; escreve o valor subtraído nos displays
+    ;MOV  [R1], R1                  ; escreve o valor subtraído nos displays
     MOV  [valor_display_dec], R1
     
     
