@@ -1467,7 +1467,7 @@ decrementa:
         SUB  R5, R9                        ; subtrai 99H ao limite superior das unidades
         ADD  R5, R11                       ; ajusta o limite superior das unidades
         SUB  R6, R4                        ; subtrai 99 H ao limite inferior das unidades
-	ADD  R6, R11
+	SUB  R6, R11
         MOV  [limite_uni_sup], R5          ; atualiza os limites das unidades
         MOV  [limite_uni_inf], R6 
 
