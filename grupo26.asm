@@ -16,6 +16,8 @@
 ; - padrao de transição
 ; - passar os desenhos para só um desenho?
 ; - dar spawn no mesmo sítio - asteroides
+; - organizar a ordem das funções
+; - organizar as constantes
 
 ; **********************************************************************
 ; * Constantes
@@ -40,6 +42,8 @@ DUZENTOS_CINQUENTA_SEIS EQU 256
 CENTO_TRES              EQU 103
 CENTO_QUARENTA_QUATRO   EQU 144
 TECLA_INICIO_JOGO       EQU 0CH         ; tecla que dá inicio ao jogo
+TECLA_PAUSA_RET_JOGO    EQU 0DH         ; tecla que permite suspender ou continuar o jogo
+TECLA_TERMINAR_JOGO     EQU 0EH         ; tecla que permite terminar o jogo
 TECLA_0                 EQU 0           ; tecla que move a sonda para a esquerda (a 45º)
 TECLA_1                 EQU 1           ; tecla que move a sonda em frente
 TECLA_2                 EQU 2           ; tecla que move a sonda para a direita (a 45º)
@@ -54,6 +58,8 @@ MASCARA_MAIOR           EQU 0FFH        ; para isolar os 4 bits de maior peso,
                                         ; ao gerar um numero aleatorio                                        
 ATRASO			        EQU	400H		; atraso para limitar a velocidade de movimento do boneco
 N_ASTEROIDES			EQU 4		    ; número de asteroides
+N_SONDAS    			EQU 3		    ; número máximo de sondas
+ALCANCE_MAX    			EQU 12		    ; número máximo de movimentos das sondas
 
 
 ; Multimédia
@@ -103,7 +109,8 @@ LINHA_NAVE              EQU 24          ; linha em que começa a nave
 COLUNA_NAVE             EQU 24          ; coluna em que começa a nave
 COLUNA_SONDA            EQU 32          ; coluna em que se encontra a sonda
 MAX_LINHA		        EQU 31          ; número da linha mais em baixo que o asteroide pode ocupar
-
+LINHA_SONDA_0_2         EQU 25          ; número da linha onde são disparadas as sondas 0 e 2
+LINHA_SONDA_1           EQU 23          ; número da linha onde é disparada a sonda 1
 
 ; Cores
 
@@ -171,7 +178,6 @@ limite_uni_sup:         WORD  0AH    ; variavel que guarda a partir do qual o va
 limite_uni_inf:         WORD  0      ; variavel que guarda a partir do qual o valor das unidades diminui e deixa de ser decimal
 limite_dez_sup:         WORD  99H    ; variavel que guarda a partir do qual o valor das dezenas aumenta e deixa de ser decimal
 limite_dez_inf:         WORD  0      ; variavel que guarda a partir do qual o valor das dezenas diminui e deixa de ser decimal
-linha_sonda:            WORD  23     ; variavel que guarda a linha da sonda
 
 
 PLACE		            0800H
@@ -242,6 +248,17 @@ ecra_asteroide:
     WORD 3
 
 
+linha_sonda:   ; linha onde cada uma das sondas está
+    WORD 0
+    WORD 0
+    WORD 0
+
+coluna_sonda:  ; coluna onde cada uma das sondas está
+    WORD 0
+    WORD 0
+    WORD 0
+
+
 ; **********************************************************************
 ; * Código
 ; **********************************************************************
@@ -261,6 +278,7 @@ inicio:
     MOV  [INICIA_VIDEO_SOM], R1           ; inicia o vídeo 0
     MOV  [SELECIONA_CENARIO_FRONTAL], R1  ; seleciona o cenário frontal número 0
     MOV  R11, N_ASTEROIDES                ; número de asteroides a usar
+    MOV  R10, N_SONDAS                    ; número máximo de sondas a usar
     EI0					                  ; permite interrupções 0
     EI1					                  ; permite interrupções 1
     EI2					                  ; permite interrupções 2
@@ -312,14 +330,19 @@ controlo:
     MOV  [valor_display], R2
     MOV  [valor_display_dec], R4        ; inicializa-se o valor em 64
 
-;   CALL energia                        ; cria o processo energia
-;   CALL sonda                          ; cria o processo sonda
+   CALL energia                        ; cria o processo energia
 
     loop_asteroides:
         SUB  R11, 1                     ; próximo asteroide
     	CALL asteroide			        ; cria uma nova instância do processo asteroide (o valor de R11 distingue-as)
 	    CMP  R11, 0			            ; já se criaram as instâncias todas?
         JNZ	 loop_asteroides		    ; se não, continua
+
+    loop_sondas:                        
+        SUB  R10, 1                     ; próximo sonda
+        CALL sonda  			        ; cria uma nova instância do processo sonda (o valor de R10 distingue-as)
+        CMP  R10, 0			            ; já se criaram as instâncias todas?
+        JNZ	 loop_sondas    		    ; se não, continua
 
     loop_2:
         YIELD
@@ -415,43 +438,85 @@ energia:
 PROCESS SP_inicial_sonda
 
 sonda:
+    MOV R1, TAMANHO_PILHA   ; tamanho em palavras da pilha de cada processo
+    MUL R1, R10             ; TAMANHO_PILHA vezes o nº da instância da sonda
+    SUB	SP, R1              ; inicializa SP desta sonda
 
-    ; inicializações
-    MOV R0, TECLA_0
-    MOV R1, TECLA_1
-    MOV R2, TECLA_2
+    MOV R9, R10			    ; cópia do nº de instância do processo
+	SHL R9, 1			    ; multiplica por 2 porque as tabelas são de WORDS
 
-    espera_sonda:
+    MOV R4, ALCANCE_MAX
+
+    espera_tecla_sonda:
         YIELD
+        
+        ; inicializações
+        MOV R0, TECLA_0
+        MOV R1, TECLA_1
+        MOV R2, TECLA_2
+
         MOV	R3, [tecla_carregada]	   ; bloqueia neste LOCK até uma tecla ser carregada
 
         CMP	R3, R0                     ; a tecla carregada é a 0?
-        JZ  lançar_sonda
+        JZ  sonda_0
 
         CMP	R3, R1                     ; a tecla carregada é a 1?
-        JZ  lançar_sonda
+        JZ  sonda_1
 
         CMP	R3, R2                     ; a tecla carregada é a 2?
-        JZ  lançar_sonda
+        JZ  sonda_2
 
-        JMP espera_sonda               ; se a tecla nao for nem a 0, 1 ou 2,
+        JMP espera_tecla_sonda         ; se a tecla nao for nem a 0, 1 ou 2,
                                        ; espera-se até uma destas teclas serem carregadas
 
-;        loop_sondas:
-;    	CALL asteroide			        ; cria uma nova instância do processo asteroide (o valor de R11 distingue-as)
-;	    CMP  R11, 0			            ; já se criaram as instâncias todas?
-;        JNZ	 loop_asteroides		    ; se não, continua
+    sonda_0:                        ; caso em que a sonda sai do canto esquerdo da nave
+        MOV  R1, LINHA_SONDA_0_2    ; a linha inicial desta sonda
+        MOV  R0, 26                 ; a coluna inicial desta sonda
+        MOV  R5, -1                 ; o sentido de movimento da linha desta sonda
+        MOV  R6, -1                 ; o sentido de movimento da coluna desta sonda
+        JMP continua_sonda
 
-    lançar_sonda:
+    sonda_1:                        ; caso em que a sonda sai do meio da nave
+        MOV  R1, LINHA_SONDA_1      ; a linha inicial desta sonda
+        MOV  R0, 32                 ; a coluna inicial desta sonda
+        MOV  R5, -1                 ; o sentido de movimento da linha desta sonda
+        MOV  R6, 0                  ; o sentido de movimento da coluna desta sonda
+        JMP continua_sonda
 
-        CALL som_disparo
+    sonda_2:                        ; caso em que a sonda sai do canto direito da nave
+        MOV  R1, LINHA_SONDA_0_2    ; a linha inicial desta sonda
+        MOV  R0, 38                 ; a coluna inicial desta sonda
+        MOV  R5, -1                 ; o sentido de movimento da linha desta sonda
+        MOV  R6, 1                  ; o sentido de movimento da coluna desta sonda
+
+    continua_sonda:
+        MOV  R8, linha_sonda        ; tabela das linhas das sondas
+        MOV  [R8+R9], R1            ; linha onde está a determinada sonda
+                            
+        MOV  R7, coluna_sonda       ; tabela das colunas das sondas
+        MOV  [R7+R9], R0		    ; coluna onde está a determinada sonda
+        MOV  R2, R0
+
+    CALL som_disparo
+    MOV  R10, 0                     ; inicializa o número de movimentos da determinada sonda
+
+    espera_sonda:
+
         CALL desenha_sonda              
 
         MOV  R0, [evento_int_mover_sonda] ; este processo é aqui bloqueado, e só vai ser
                                           ; desbloqueado com a respetiva rotina de interrupção
 
-        CALL apaga_sonda
-        JMP  lançar_sonda
+        CALL apaga_sonda                  ; apaga o asteroide na sua posição corrente
+        INC  R10                          ; incrementa o número de movimentos da determinada sonda
+
+        CMP  R10, R4                      ; vê se chegou aos limites do alcance máximo da sonda
+        JZ   espera_tecla_sonda           ; se chegou, a sonda desaparece
+
+        ADD	R1, R5			              ; para desenhar a sonda na nova posição
+        ADD	R2, R6
+
+        JMP  espera_sonda
 
 
 ; *****************************************************************************
@@ -469,8 +534,8 @@ asteroide:
     MUL R1, R11             ; TAMANHO_PILHA vezes o nº da instância do asteroide
     SUB	SP, R1              ; inicializa SP deste asteroide
 
-    MOV  R10, R11			; cópia do nº de instância do processo
-	SHL  R10, 1			    ; multiplica por 2 porque as tabelas são de WORDS
+    MOV R10, R11			; cópia do nº de instância do processo
+	SHL R10, 1			    ; multiplica por 2 porque as tabelas são de WORDS
 
     CALL inicia_asteroide    ; apenas neste caso inicial é que os asteroides são 
                              ; distribuídos pelas cinco ações sequencialmente
@@ -483,10 +548,10 @@ asteroide:
         CALL gerar_asteroide    ; determina o tipo do asteroide
 
         MOV  R9, linha_asteroide    ; tabela das linhas dos asteroides
-        MOV  R1, [R9+R10]		    ; linha em que está o determinado asteroide
+        MOV  R1, [R9+R10]		    ; linha onde está o determinado asteroide
                             
         MOV  R8, coluna_asteroide   ; tabela das colunas dos asteroides
-        MOV  [R8+R10], R0		    ; coluna em que está o determinado asteroide
+        MOV  [R8+R10], R0		    ; coluna onde está o determinado asteroide
         MOV  R2, R0
 
         MOV  R3, tipo_asteroide     ; tabela dos tipos dos asteroides
@@ -501,21 +566,21 @@ asteroide:
         tipo_minerável:
             MOV  R4, DEF_ASTEROIDE_MIN      ; endereço da tabela que define o asteroide
 
-espera_asteroide:
-	CALL desenha_asteroide		    ; desenha o asteroide a partir da tabela, na sua posição atual
+    espera_asteroide:
+        CALL desenha_asteroide		    ; desenha o asteroide a partir da tabela, na sua posição atual
 
-    MOV  R0, [evento_int_mover_ast] ; este processo é aqui bloqueado, e só vai ser
-                                    ; desbloqueado com a respetiva rotina de interrupção
+        MOV  R0, [evento_int_mover_ast] ; este processo é aqui bloqueado, e só vai ser
+                                        ; desbloqueado com a respetiva rotina de interrupção
 
-	CALL apaga_asteroide     		; apaga o asteroide na sua posição corrente
+        CALL apaga_asteroide     		; apaga o asteroide na sua posição corrente
 
-    CALL testa_limites              ; vê se chegou aos limites do ecrã
-	CMP  R7, 1                      ; se o asteroide saiu do ecrã
-    JZ   novo_asteroide             ; cria-se um novo asteroide
+        CALL testa_limites              ; vê se chegou aos limites do ecrã
+        CMP  R7, 1                      ; se o asteroide saiu do ecrã
+        JZ   novo_asteroide             ; cria-se um novo asteroide
 
-	ADD	R1, R5			            ; para desenhar asteroide na nova posição
-	ADD	R2, R6			        
-	JMP espera_asteroide	
+        ADD	R1, R5			            ; para desenhar o asteroide na nova posição
+        ADD	R2, R6			        
+        JMP espera_asteroide	
 
 
 ; *****************************************************************************
@@ -568,6 +633,7 @@ avanca_linha:
     sai_avanca_linha:
         POP  R1
         RET
+
 
 ; *****************************************************************************
 ; OBTEM_VALOR_TECLA: Calcula o valor de uma determinada tecla
@@ -688,8 +754,8 @@ desenha_nave:
     PUSH R6
     PUSH R7
 
-    MOV R7, 1 
-    MOV [SELECIONA_ECRA], R7      ; seleciona o ecrã 1
+    MOV R7, QUATRO 
+    MOV [SELECIONA_ECRA], R7      ; seleciona o ecrã 4
 
     ; posição da nave
     MOV  R1, LINHA_NAVE			  ; linha da nave
@@ -746,44 +812,6 @@ muda_luzes:
 
 
 
-
-
-
-; *****************************************************************************
-; MOVE_SONDA:  Move a sonda com a temporização de 200 milissegundos
-;
-; Entrada(s):  ---
-;
-; Saida(s):    ---	
-;
-; *****************************************************************************
-
-move_sonda:
-    PUSH R0
-    PUSH R1
-    PUSH R2
-    PUSH R3
-    PUSH R4
-
-    ; posição da sonda:
-    MOV  R1, [linha_sonda]	        ; linha da sonda
-    MOV  R2, COLUNA_SONDA	        ; coluna da sonda
-    
-    CALL apaga_sonda
-
-    ; decrementa a linha da sonda:
-    MOV  R1, [linha_sonda]	        ; linha da sonda
-    DEC  R1
-    MOV  [linha_sonda], R1
-
-    CALL desenha_sonda
-
-    POP R4
-    POP R3
-    POP R2
-    POP R1
-    POP R0
-    RET
 
 
 ; *****************************************************************************
@@ -853,8 +881,14 @@ apaga_asteroide:
 ; *****************************************************************************
 
 desenha_sonda:
-    MOV	 R3, AMARELO        ; obtém a cor do próximo pixel da sonda (transparente neste caso)
+    PUSH R3
+    MOV  R3, QUATRO 
+    MOV [SELECIONA_ECRA], R3    ; seleciona o ecrã 4
+
+    MOV	 R3, AMARELO            ; obtém a cor do próximo pixel da sonda (amarelo neste caso)
     CALL escreve_pixel
+    POP  R3
+    RET
 
 
 ; *****************************************************************************
@@ -868,16 +902,21 @@ desenha_sonda:
 ; *****************************************************************************
 
 apaga_sonda:
-    MOV	 R3, 0			  ; obtém a cor do próximo pixel da sonda (transparente neste caso)
-    CALL escreve_pixel
+    PUSH R3
+    MOV  R3, QUATRO 
+    MOV [SELECIONA_ECRA], R3    ; seleciona o ecrã 4
 
+    MOV	 R3, 0                  ; obtém a cor do próximo pixel da sonda (transparente neste caso)
+    CALL escreve_pixel
+    POP  R3
+    RET
 
 
 ; *****************************************************************************
 ; ESCREVE_PIXEL - Escreve um pixel na linha e coluna indicadas
 
-; Entrada(s):   R1 - linha
-;               R2 - coluna
+; Entrada(s):   R1 - linha do objeto
+;               R2 - coluna do objeto
 ;               R3 - cor do pixel (em formato ARGB de 16 bits)
 ;
 ; Saida(s):     ---
@@ -1338,3 +1377,4 @@ testa_limites:
         POP	R5
         POP R1
         RET
+
