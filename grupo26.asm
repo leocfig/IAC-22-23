@@ -174,8 +174,8 @@ tecla_carregada:        LOCK  0	     ; LOCK para o teclado comunicar aos restant
 modo_atual:             LOCK  0      ; LOOK que controla as teclas de start, pause e stop
 valor_display:          WORD  0      ; variavel que guarda o valor do display
 valor_display_dec:      WORD  0      ; variavel que guarda o valor do display atual em decimal
-limite_uni_sup:         WORD  0AH    ; variavel que guarda a partir do qual o valor das unidades aumenta e deixa de ser decimal
-limite_uni_inf:         WORD  0      ; variavel que guarda a partir do qual o valor das unidades diminui e deixa de ser decimal
+limite_uni_sup:         WORD  10AH   ; variavel que guarda a partir do qual o valor das unidades aumenta e deixa de ser decimal
+limite_uni_inf:         WORD  100H   ; variavel que guarda a partir do qual o valor das unidades diminui e deixa de ser decimal
 limite_dez_sup:         WORD  199H   ; variavel que guarda a partir do qual o valor das dezenas aumenta e deixa de ser decimal
 limite_dez_inf:         WORD  100H   ; variavel que guarda a partir do qual o valor das dezenas diminui e deixa de ser decimal
 
