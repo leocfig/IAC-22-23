@@ -14,6 +14,7 @@
 ; Tarefas a realizar:
 ;
 ; - padrao de transição
+; - passar os desenhos para só um desenho?
 
 ; **********************************************************************
 ; * Constantes
@@ -127,10 +128,10 @@ PLACE                        1500H
 ; Reserva do espaço para as pilhas dos processos
 
         STACK TAMANHO_PILHA                 ; reserva espaco para a pilha do processo do programa principal
-SP_inicial_prog_princ:                      ; este é o endereço (1200H) com que o SP deste processo vai ser inicializado
+SP_inicial_prog_princ:                      ; este é o endereço (1700H) com que o SP deste processo vai ser inicializado
 
         STACK TAMANHO_PILHA	                ; espaço reservado para a pilha do processo "controlo"
-SP_inicial_controlo:	                    ; este é o endereço (1400H) com que o SP deste processo vai ser inicializado
+SP_inicial_controlo:	                    ; este é o endereço (1900H) com que o SP deste processo vai ser inicializado
 
 	    STACK TAMANHO_PILHA	                ; espaço reservado para a pilha do processo "teclado"
 SP_inicial_teclado:	                        ; este é o endereço (1600H) com que o SP deste processo vai ser inicializado
@@ -155,10 +156,10 @@ tab:
     WORD int_nave               ; rotina de atendimento da interrupção 3
 
 
-evento_int_mover_ast:   LOCK  0		 ; LOCK para a rotina de interrupção comunicar ao processo ...
-evento_int_mover_sonda: LOCK  0		 ; LOCK para a rotina de interrupção comunicar ao processo ...
-evento_int_energia:     LOCK  0		 ; LOCK para a rotina de interrupção comunicar ao processo ...
-evento_int_nave:        LOCK  0		 ; LOCK para a rotina de interrupção comunicar ao processo ...
+evento_int_mover_ast:   LOCK  0		 ; LOCK para a rotina de interrupção comunicar ao processo do asteroide
+evento_int_mover_sonda: LOCK  0		 ; LOCK para a rotina de interrupção comunicar ao processo da sonda
+evento_int_energia:     LOCK  0		 ; LOCK para a rotina de interrupção comunicar ao processo da energia
+evento_int_nave:        LOCK  0		 ; LOCK para a rotina de interrupção comunicar ao processo da nave
 
 tecla_carregada:        LOCK  0	     ; LOCK para o teclado comunicar aos restantes processos que tecla detetou
 modo_atual:             LOCK  0      ; LOOK que controla as teclas de start, pause e stop
@@ -272,8 +273,6 @@ inicio:
 
 ; corpo principal do programa
 
-PROCESS SP_inicial_prog_princ
-
 ciclo:
     YIELD
     JMP ciclo
@@ -357,6 +356,7 @@ teclado:
         CALL obtem_colunas          ; obtem as colunas da determinada linha
         CMP  R0, 0                  ; há tecla premida?
         JNZ  ha_tecla               ; se ainda houver uma tecla premida, espera-se ate não haver
+        JMP  espera_tecla           ; sai deste ciclo quando já não há nenhuma tecla premida
 
 
 
@@ -373,14 +373,15 @@ PROCESS SP_inicial_nave
 nave:
 
     CALL desenha_nave
+    RET
 
-    espera_nave:
-        MOV  R0, [evento_int_nave]  ; este processo é aqui bloqueado, e só vai ser
+;    espera_nave:
+;        MOV  R0, [evento_int_nave]  ; este processo é aqui bloqueado, e só vai ser
                                     ; desbloqueado com a respetiva rotina de interrupção
 
-;        CALL muda_luzes             ; produz o efeito das luzes quando a interrupção ocorre
+;        CALL muda_luzes            ; produz o efeito das luzes quando a interrupção ocorre
 
-        JMP espera_nave
+ ;       JMP espera_nave
 
 
 ; *****************************************************************************
@@ -434,14 +435,21 @@ sonda:
         JMP espera_sonda               ; se a tecla nao for nem a 0, 1 ou 2,
                                        ; espera-se até uma destas teclas serem carregadas
 
-        CALL desenha_sonda             ; caso seja uma das teclas 
+;        loop_sondas:
+;    	CALL asteroide			        ; cria uma nova instância do processo asteroide (o valor de R11 distingue-as)
+;	    CMP  R11, 0			            ; já se criaram as instâncias todas?
+;        JNZ	 loop_asteroides		    ; se não, continua
 
     lançar_sonda:
-        MOV  R0, [evento_int_mover_sonda] ; este processo é aqui bloqueado, e só vai ser
-                                      ; desbloqueado com a respetiva rotina de interrupção
 
-        CALL move_sonda
-        JMP  espera_sonda
+        CALL som_disparo
+        CALL desenha_sonda              
+
+        MOV  R0, [evento_int_mover_sonda] ; este processo é aqui bloqueado, e só vai ser
+                                          ; desbloqueado com a respetiva rotina de interrupção
+
+        CALL apaga_sonda
+        JMP  lançar_sonda
 
 
 ; *****************************************************************************
@@ -465,60 +473,13 @@ asteroide:
     CALL gerar_asteroide    ; determina o tipo do asteroide
 
     ; desenha o asteroide na sua posição inicial
+    CALL acao_asteroide     ; determina a ação inicial a tomar pelo asteroide
 
-    CALL gerar_numero_aleatorio_4  ; gera um número aleatório entre 0 e 4
-
-    CMP  R0, 0
-    JZ   acao_0
-
-    CMP  R0, 1
-    JZ   acao_1
-
-    CMP  R0, DOIS
-    JZ   acao_2
-
-    CMP  R0, TRES
-    JZ   acao_3
-
-    CMP  R0, QUATRO
-    JZ   acao_4
-
-    acao_0:                     ; caso em que o asteroide aparece no canto superior esquerdo
-        MOV  R0, 0              ; a coluna inicial deste asteroide
-        MOV  R5, 1              ; o sentido de movimento da linha deste asteroide
-        MOV  R6, 1              ; o sentido de movimento da coluna deste asteroide
-        JMP  continua_asteroide
-
-    acao_1:                     ; caso em que o asteroide aparece no canto superior direito
-        MOV  R0, 59             ; a coluna inicial deste asteroide
-        MOV  R5, 1              ; o sentido de movimento da linha deste asteroide
-        MOV  R6, -1             ; o sentido de movimento da coluna deste asteroide
-        JMP  continua_asteroide
-
-    acao_2:                     ; caso em que o asteroide aparece no meio e desce na vertical
-        MOV  R0, 29             ; a coluna inicial deste asteroide
-        MOV  R5, 1              ; o sentido de movimento da linha deste asteroide
-        MOV  R6, 0              ; o sentido de movimento da coluna deste asteroide
-        JMP  continua_asteroide
-        
-    acao_3:                     ; caso em que o asteroide aparece no meio e desloca-se 45º para a direita
-        MOV  R0, 29             ; a coluna inicial deste asteroide
-        MOV  R5, 1              ; o sentido de movimento da linha deste asteroide
-        MOV  R6, 1              ; o sentido de movimento da coluna deste asteroide
-        JMP  continua_asteroide
-
-    acao_4:                     ; caso em que o asteroide aparece no meio e desloca-se 45º para a esquerda
-        MOV  R0, 29             ; a coluna inicial deste asteroide
-        MOV  R5, 1              ; o sentido de movimento da linha deste asteroide
-        MOV  R6, -1             ; o sentido de movimento da coluna deste asteroide
-
-
-    continua_asteroide:
 	MOV  R9, linha_asteroide   ; tabela das linhas dos asteroides
 	MOV  R1, [R9+R10]		   ; linha em que está o determinado asteroide
 						
     MOV  R8, coluna_asteroide   ; tabela das colunas dos asteroides
-	MOV  [R8+R10], R0		    ; este numero corresponde à coluna em que está o determinado asteroide
+	MOV  [R8+R10], R0		    ; coluna em que está o determinado asteroide
     MOV  R2, R0
 
 ;   MOV  R9, sentido_movimento  ; tabela dos sentidos dos movimentos dos asteroides
@@ -548,7 +509,7 @@ espera_asteroide:
 	
 	ADD	R1, R5			            ; para desenhar asteroide na nova posição
 	ADD	R2, R6			        
-	JMP espera_asteroide		
+	JMP espera_asteroide	
 
 
 ; *****************************************************************************
@@ -644,7 +605,8 @@ obtem_valor_tecla:
 
 ; *****************************************************************************
 ; 
-;			          com a forma e cor definidas na tabela indicada.
+; DESENHA_ASTEROIDE   - Desenha um asteroide na linha e coluna indicadas
+;			            com a forma e cor definidas na tabela indicada.
 ;
 ; Entrada(s):         R1  - linha
 ;                     R2  - coluna
@@ -796,11 +758,6 @@ move_sonda:
     PUSH R2
     PUSH R3
     PUSH R4
-
-    MOV R4, 1
-    MOV [SELECIONA_ECRA], R4        ; seleciona o ecrã 1
-
-    CALL som_disparo
 
     ; posição da sonda:
     MOV  R1, [linha_sonda]	        ; linha da sonda
@@ -979,14 +936,12 @@ gerar_numero_aleatorio:
 
 
 gerar_numero_aleatorio_4:
-    PUSH R1
     CALL gerar_numero_aleatorio
     CMP  R0, CINCO
     JLT  sai_gerar_numero_aleatorio_4
     JMP  gerar_numero_aleatorio_4
 
     sai_gerar_numero_aleatorio_4:
-        POP  R1
         RET
 
 
@@ -1233,5 +1188,65 @@ converte_decimal: ;TPC
 
 
 
+; *****************************************************************************
+; ACAO_ASTEROIDE - determina qual das cinco ações vai o asteroide tomar 
+;
+; Entrada(s):     ---
+;
+; Saida(s):       R0 - coluna inicial do asteroide
+;                 R5 - o sentido de movimento inicial da linha do asteroide
+;                 R6 - o sentido de movimento inicial da coluna do asteroide
+;
+; *****************************************************************************
   
-  
+acao_asteroide:
+    CALL gerar_numero_aleatorio_4  ; gera um número aleatório entre 0 e 4, deste
+                                   ; modo é garantido a equiprobabilidade das
+                                   ; cinco combinações possíveis de coluna/direção
+
+    CMP  R0, 0
+    JZ   acao_0
+
+    CMP  R0, 1
+    JZ   acao_1
+
+    CMP  R0, DOIS
+    JZ   acao_2
+
+    CMP  R0, TRES
+    JZ   acao_3
+
+    CMP  R0, QUATRO
+    JZ   acao_4
+
+    acao_0:                     ; caso em que o asteroide aparece no canto superior esquerdo
+        MOV  R0, 0              ; a coluna inicial deste asteroide
+        MOV  R5, 1              ; o sentido de movimento da linha deste asteroide
+        MOV  R6, 1              ; o sentido de movimento da coluna deste asteroide
+        JMP  sai_acao_asteroide
+
+    acao_1:                     ; caso em que o asteroide aparece no canto superior direito
+        MOV  R0, 59             ; a coluna inicial deste asteroide
+        MOV  R5, 1              ; o sentido de movimento da linha deste asteroide
+        MOV  R6, -1             ; o sentido de movimento da coluna deste asteroide
+        JMP  sai_acao_asteroide
+
+    acao_2:                     ; caso em que o asteroide aparece no meio e desce na vertical
+        MOV  R0, 29             ; a coluna inicial deste asteroide
+        MOV  R5, 1              ; o sentido de movimento da linha deste asteroide
+        MOV  R6, 0              ; o sentido de movimento da coluna deste asteroide
+        JMP  sai_acao_asteroide
+        
+    acao_3:                     ; caso em que o asteroide aparece no meio e desloca-se 45º para a direita
+        MOV  R0, 29             ; a coluna inicial deste asteroide
+        MOV  R5, 1              ; o sentido de movimento da linha deste asteroide
+        MOV  R6, 1              ; o sentido de movimento da coluna deste asteroide
+        JMP  sai_acao_asteroide
+
+    acao_4:                     ; caso em que o asteroide aparece no meio e desloca-se 45º para a esquerda
+        MOV  R0, 29             ; a coluna inicial deste asteroide
+        MOV  R5, 1              ; o sentido de movimento da linha deste asteroide
+        MOV  R6, -1             ; o sentido de movimento da coluna deste asteroide
+
+    sai_acao_asteroide:
+        RET
