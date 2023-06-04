@@ -1417,12 +1417,13 @@ decrementa:
     MOV  R8, [limite_dez_inf]
     MOV  R4, CONST_UNIDADES
     MOV  R9, CONST_DEZENAS
-    CMP  R1, R6                            ; se o valor do display tem o valor
-                                           ; igual ao do limite inferior das unidades
-    JZ   decrementa_unidades               
+    
     CMP  R1, R8                            ; se o valor do display tem o valor
                                            ; igual ao do limite inferior das dezenas
-    JZ   decrementa_dezenas                
+    JZ   decrementa_dezenas    
+    CMP  R1, R6                            ; se o valor do display tem o valor
+                                           ; igual ao do limite inferior das unidades
+    JZ   decrementa_unidades
 
     DEC R1                                 ; diminui o valor do display em uma unidade
 
