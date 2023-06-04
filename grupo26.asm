@@ -15,6 +15,7 @@
 ;
 ; - padrao de transição
 ; - passar os desenhos para só um desenho?
+; - dar spawn no mesmo sítio - asteroides
 
 ; **********************************************************************
 ; * Constantes
@@ -101,6 +102,7 @@ ALTURA_NAVE             EQU 9           ; altura da nave
 LINHA_NAVE              EQU 24          ; linha em que começa a nave
 COLUNA_NAVE             EQU 24          ; coluna em que começa a nave
 COLUNA_SONDA            EQU 32          ; coluna em que se encontra a sonda
+MAX_LINHA		        EQU 31          ; número da linha mais em baixo que o asteroide pode ocupar
 
 
 ; Cores
@@ -470,34 +472,34 @@ asteroide:
     MOV  R10, R11			; cópia do nº de instância do processo
 	SHL  R10, 1			    ; multiplica por 2 porque as tabelas são de WORDS
 
-    CALL gerar_asteroide    ; determina o tipo do asteroide
+    CALL inicia_asteroide    ; apenas neste caso inicial é que os asteroides são 
+                             ; distribuídos pelas cinco ações sequencialmente
+    JMP  continua_asteroide
 
-    ; desenha o asteroide na sua posição inicial
-    CALL acao_asteroide     ; determina a ação inicial a tomar pelo asteroide
+    novo_asteroide:
+        CALL acao_asteroide     ; determina a ação aleatória a tomar pelo asteroide
 
-	MOV  R9, linha_asteroide   ; tabela das linhas dos asteroides
-	MOV  R1, [R9+R10]		   ; linha em que está o determinado asteroide
-						
-    MOV  R8, coluna_asteroide   ; tabela das colunas dos asteroides
-	MOV  [R8+R10], R0		    ; coluna em que está o determinado asteroide
-    MOV  R2, R0
+    continua_asteroide:
+        CALL gerar_asteroide    ; determina o tipo do asteroide
 
-;   MOV  R9, sentido_movimento  ; tabela dos sentidos dos movimentos dos asteroides
-;	MOV  [R9+R10], R3		    ; sentido de movimento da linha do asteroide
-;   ADD  R9, DOIS               ; para se estabelecer o sentido de movimento da coluna
-;	MOV  [R9+R10], R4		    ; sentido de movimento da coluna do asteroide
+        MOV  R9, linha_asteroide    ; tabela das linhas dos asteroides
+        MOV  R1, [R9+R10]		    ; linha em que está o determinado asteroide
+                            
+        MOV  R8, coluna_asteroide   ; tabela das colunas dos asteroides
+        MOV  [R8+R10], R0		    ; coluna em que está o determinado asteroide
+        MOV  R2, R0
 
-    MOV  R3, tipo_asteroide     ; tabela dos tipos dos asteroides
-    MOV  R4, [R3+R10]           ; tipo do determinado asteroide
-    CMP  R4, 1                  ; se o determinado asteroide for minerável
-    JZ   tipo_minerável
+        MOV  R3, tipo_asteroide     ; tabela dos tipos dos asteroides
+        MOV  R4, [R3+R10]           ; tipo do determinado asteroide
+        CMP  R4, 1                  ; se o determinado asteroide for minerável
+        JZ   tipo_minerável
 
-    tipo_nao_minerável:
-	    MOV  R4, DEF_ASTEROIDE_NAO_MIN  ; endereço da tabela que define o asteroide
-        JMP  espera_asteroide
+        tipo_nao_minerável:
+            MOV  R4, DEF_ASTEROIDE_NAO_MIN  ; endereço da tabela que define o asteroide
+            JMP  espera_asteroide
 
-    tipo_minerável:
-	    MOV  R4, DEF_ASTEROIDE_MIN      ; endereço da tabela que define o asteroide
+        tipo_minerável:
+            MOV  R4, DEF_ASTEROIDE_MIN      ; endereço da tabela que define o asteroide
 
 espera_asteroide:
 	CALL desenha_asteroide		    ; desenha o asteroide a partir da tabela, na sua posição atual
@@ -506,7 +508,11 @@ espera_asteroide:
                                     ; desbloqueado com a respetiva rotina de interrupção
 
 	CALL apaga_asteroide     		; apaga o asteroide na sua posição corrente
-	
+
+    CALL testa_limites              ; vê se chegou aos limites do ecrã
+	CMP  R7, 1                      ; se o asteroide saiu do ecrã
+    JZ   novo_asteroide             ; cria-se um novo asteroide
+
 	ADD	R1, R5			            ; para desenhar asteroide na nova posição
 	ADD	R2, R6			        
 	JMP espera_asteroide	
@@ -1249,4 +1255,86 @@ acao_asteroide:
         MOV  R6, -1             ; o sentido de movimento da coluna deste asteroide
 
     sai_acao_asteroide:
+        RET
+
+
+; *****************************************************************************
+; INICIA_ASTEROIDE - atribui aos asteroides sequencialmente as possíveis ações
+;
+; Entrada(s):      R11 - instância do processo
+;
+; Saida(s):        R0 - coluna inicial do asteroide
+;                  R5 - o sentido de movimento inicial da linha do asteroide
+;                  R6 - o sentido de movimento inicial da coluna do asteroide
+;
+; *****************************************************************************
+
+inicia_asteroide:
+
+    CMP  R11, 0
+    JZ   inicia_0
+
+    CMP  R11, 1
+    JZ   inicia_1
+
+    CMP  R11, DOIS
+    JZ   inicia_2
+
+    CMP  R11, TRES
+    JZ   inicia_3
+
+    inicia_0:                   ; caso em que o asteroide aparece no canto superior esquerdo
+        MOV  R0, 0              ; a coluna inicial deste asteroide
+        MOV  R5, 1              ; o sentido de movimento da linha deste asteroide
+        MOV  R6, 1              ; o sentido de movimento da coluna deste asteroide
+        JMP  sai_inicia_asteroide
+
+    inicia_1:                   ; caso em que o asteroide aparece no meio e desloca-se 45º para a esquerda
+        MOV  R0, 29             ; a coluna inicial deste asteroide
+        MOV  R5, 1              ; o sentido de movimento da linha deste asteroide
+        MOV  R6, -1             ; o sentido de movimento da coluna deste asteroide; caso em que o asteroide aparece no canto superior direito
+        JMP  sai_inicia_asteroide
+
+    inicia_2:                   ; caso em que o asteroide aparece no meio e desce na vertical
+        MOV  R0, 29             ; a coluna inicial deste asteroide
+        MOV  R5, 1              ; o sentido de movimento da linha deste asteroide
+        MOV  R6, 0              ; o sentido de movimento da coluna deste asteroide
+        JMP  sai_inicia_asteroide
+        
+    inicia_3:                   ; caso em que o asteroide aparece no meio e desloca-se 45º para a direita
+        MOV  R0, 29             ; a coluna inicial deste asteroide
+        MOV  R5, 1              ; o sentido de movimento da linha deste asteroide
+        MOV  R6, 1              ; o sentido de movimento da coluna deste asteroide; caso em que o asteroide aparece no canto superior direito
+
+    sai_inicia_asteroide:
+        RET
+
+
+
+; *****************************************************************************
+; TESTA_LIMITES - Testa se o asteroide chegou aos limites do ecrã e nesse caso
+;			      inverte o sentido de movimento
+;
+; Entrada(s): 	  R1 - linha em que o asteroide está
+;
+; Saida(s): 	  R7 - indicador que fica a um se o asteroide chegou aos limites do ecrã
+;
+; *****************************************************************************
+
+testa_limites:
+    PUSH    R1
+	PUSH	R5
+    MOV     R7, 0
+    
+    testa_limite_inferior:		; vê se o asteroide chegou ao limite inferior do ecrã
+        MOV	R5, MAX_LINHA
+        DEC R1                  ; decrementar 1 da primeira posição em que 
+                                ; o asteroide já desapareceu por completo
+        CMP	R1, R5
+        JNZ sai_testa_limites   ; se não estava no limite, o R7 mantém-se a 0
+        MOV R7, 1
+
+    sai_testa_limites:	
+        POP	R5
+        POP R1
         RET
