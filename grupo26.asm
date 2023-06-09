@@ -13,24 +13,21 @@
 
 ; Tarefas a realizar:
 ;
-; - dar spawn no mesmo sítio - asteroides
-; - organizar as constantes
 ; - relatório
-; - loop video desaparece
 ; - yield bem feito
-; - som piu
+; - som piu deixa de acontecer
+; - colisões
+; - pausa de nave?
+
 
 ; **********************************************************************
 ; * Constantes
 ; **********************************************************************
 
+; Constantes numéricas
 
-FATOR                   EQU 1000        ; uma potência de 10 (para obter os dígitos)
-TAMANHO_PILHA           EQU 100H        ; tamanho de cada pilha, em words
-CONST_UNIDADES          EQU 10H         ; constante que se adiciona ou subtrai
-                                        ; aos limites quando se muda de dezena
-CONST_DEZENAS           EQU 100H        ; constante que se adiciona ou subtrai
-                                        ; aos limite quando se muda de centena
+MENOS_CINCO             EQU -5
+MENOS_UM                EQU -1
 DOIS                    EQU 2
 TRES                    EQU 3
 QUATRO                  EQU 4
@@ -46,6 +43,8 @@ CEM                     EQU 100
 DUZENTOS_CINQUENTA_SEIS EQU 256         
 CENTO_TRES              EQU 103
 CENTO_QUARENTA_QUATRO   EQU 144
+FATOR                   EQU 1000        ; uma potência de 10 (para obter os dígitos)
+TAMANHO_PILHA           EQU 100H        ; tamanho de cada pilha, em words
 TECLA_INICIO_JOGO       EQU 0CH         ; tecla que dá inicio ao jogo
 TECLA_PAUSA_RET_JOGO    EQU 0DH         ; tecla que permite suspender ou continuar o jogo
 TECLA_TERMINAR_JOGO     EQU 0EH         ; tecla que permite terminar o jogo
@@ -71,22 +70,20 @@ ALCANCE_MAX    			EQU 12		    ; número máximo de movimentos das sondas
 VIDEO_COMECO            EQU 0           ; video de comeco corresponde ao primeiro video (video/som numero 0)
 VIDEO_JOGO              EQU 1           ; video de fundo enquanto o jogo decorre corresponde ao segundo video (video/som numero 1)
 VIDEO_FIM               EQU 2           ; video de fundo enquanto o jogo decorre corresponde ao terceiro video (video/som numero 2)
-
-CENARIO_COMECO          EQU 0           ; cenario frontal de comeco corresponde à primeira imagem (imagem numero 0)
-CENARIO_PAUSA           EQU 1           ; cenario frontal de pausa corresponde à segunda imagem (imagem numero 1)
-CENARIO_FIM             EQU 4           ; cenario frontal de pausa corresponde à quinta imagem (imagem numero 4)
-
-ECRA_DERROTA            EQU 2           ; ecra de derrota por colisão, corresponde à terceira imagem (imagem numero 2)
-ECRA_SEM_ENERGIA        EQU 3           ; ecra de derrota por falta de energia, corresponde à quarta imagem (imagem numero 3)
-
 SOM_DISPARO             EQU 3           ; som do disparo, corresponde ao primeiro som (video/som numero 3)
-SOM_ATINGE              EQU 4           ; som da sonda a atingir um asteroide, corresponde ao segundo som (video/som numero 4)
-SOM_FIM                 EQU 5           ; som quando o jogo é terminado, corresponde ao terceiro som (video/som numero 5)
-SOM_EXPLOSAO            EQU 6           ; som da explosão, corresponde ao quarto som (video/som numero 6)
-SOM_NICE_WORK           EQU 7
+SOM_ATINGE_MIN          EQU 4           ; som da sonda a atingir um asteroide, corresponde ao segundo som (video/som numero 4)
+SOM_ATINGE_NAO_MIN      EQU 5           ; som da sonda a atingir um asteroide, corresponde ao segundo som (video/som numero 4)
+SOM_FIM                 EQU 6           ; som quando o jogo é terminado, corresponde ao terceiro som (video/som numero 5)
+SOM_EXPLOSAO            EQU 7           ; som da explosão, corresponde ao quarto som (video/som numero 6)
 SOM_JOGO                EQU 8
 SOM_ENERGIA             EQU 9
 SOM_INICIO              EQU 10
+
+CENARIO_COMECO          EQU 0           ; cenario frontal de comeco corresponde à primeira imagem (imagem numero 0)
+CENARIO_PAUSA           EQU 1           ; cenario frontal de pausa corresponde à segunda imagem (imagem numero 1)
+ECRA_DERROTA            EQU 2           ; ecra de derrota por colisão, corresponde à terceira imagem (imagem numero 2)
+ECRA_SEM_ENERGIA        EQU 3           ; ecra de derrota por falta de energia, corresponde à quarta imagem (imagem numero 3)
+CENARIO_FIM             EQU 4           ; cenario frontal de pausa corresponde à quinta imagem (imagem numero 4)
 
 
 ; Comandos
@@ -105,8 +102,9 @@ SELECIONA_CENARIO_FUNDO   EQU COMANDOS + 42H	; endereço do comando para selecio
 SELECIONA_CENARIO_FRONTAL EQU COMANDOS + 46H	; endereço do comando para exibir algo no ecrã,sobreposto ao que já lá está
 SELECIONA_ECRA            EQU COMANDOS + 04H	; endereço do comando para selecionar um ecra
 INICIA_VIDEO_SOM          EQU COMANDOS + 5AH	; endereço do comando para iniciar vídeos/sons
-REP_VIDEO_SOM             EQU COMANDOS + 5CH	; endereço do comando para reproduzir vídeos/sons
-PAUSA_VIDEO_SOM           EQU COMANDOS + 62H    ; endereço do comando para suspender a reprodução de vídeos/sons
+REP_VIDEO_SOM             EQU COMANDOS + 5CH	; endereço do comando para reproduzir vídeos/sons em loop
+PAUSA_VIDEO_SOM           EQU COMANDOS + 62H    ; endereço do comando para suspender a reprodução de todos os vídeos/sons
+CONTI_VIDEO_SOM           EQU COMANDOS + 64H    ; endereço do comando para continuar a reprodução de todos os vídeos/sons
 OBTEM_COR_PIXEL           EQU COMANDOS + 10H    ; endereço do comando para obter a cor do pixel na posição corrente
 OBTEM_ECRA                EQU COMANDOS + 04H    ; endereço do comando para obter o ecrã atualmente selecionado
 
@@ -129,7 +127,6 @@ COLUNA_SONDA_DIR        EQU 38          ; coluna em que é dispara a sonda da di
 MAX_LINHA		        EQU 31          ; número da linha mais em baixo que o asteroide pode ocupar
 LINHA_SONDA_0_2         EQU 25          ; número da linha onde são disparadas as sondas 0 e 2
 LINHA_SONDA_1           EQU 23          ; número da linha onde é disparada a sonda 1
-ENDEREÇO_LUZES_FINAL    EQU 8E6H        ; endereço da última tabela das luzes da nave
 
 ; Cores
 
@@ -144,7 +141,6 @@ LARANJA   			    EQU	0FF40H		; cor do pixel: laranja em ARGB
 QUASE_PRETO   			EQU	0F333H		; cor do pixel: quase-preto em ARGB
 BRANCO                  EQU 0FFFFH      ; cor do pixel: branco em ARGB
 AMARELO   			    EQU	0FFF0H		; cor do pixel: amarelo em ARGB
-
 
 
 ; *****************************************************************************
@@ -178,10 +174,10 @@ SP_inicial_asteroide:	                    ; este é o endereço (2400H) com que 
 
 
 tab:
-    WORD int_mover_asteroide    ; rotina de atendimento da interrupção 0
-    WORD int_mover_sonda        ; rotina de atendimento da interrupção 1
-    WORD int_energia            ; rotina de atendimento da interrupção 2
-    WORD int_nave               ; rotina de atendimento da interrupção 3
+    WORD int_mover_asteroide         ; rotina de atendimento da interrupção 0
+    WORD int_mover_sonda             ; rotina de atendimento da interrupção 1
+    WORD int_energia                 ; rotina de atendimento da interrupção 2
+    WORD int_nave                    ; rotina de atendimento da interrupção 3
 
 
 evento_int_mover_ast:   LOCK  0		 ; LOCK para a rotina de interrupção comunicar ao processo do asteroide
@@ -348,13 +344,13 @@ ecra_asteroide:
     WORD 2
     WORD 3
 
-estado_asteroide:
+estado_asteroide:   ; 0 para jogo a decorrer e 1 para jogo terminado
     WORD 0
     WORD 0
     WORD 0
     WORD 0
 
-pausa_asteroide:
+pausa_asteroide:    ; 0 para jogo a decorrer e 1 para jogo pausado
     WORD 0
     WORD 0
     WORD 0
@@ -370,6 +366,12 @@ coluna_sonda:  ; coluna onde cada uma das sondas está
     WORD COLUNA_SONDA_ESQ
     WORD COLUNA_SONDA_MEIO
     WORD COLUNA_SONDA_DIR
+
+estado_sonda:
+    WORD 0
+    WORD 0
+    WORD 0
+    WORD 0
 
 
 sentido_movimento_sonda:	; sentido movimento inicial de cada sonda (+1 para a direita ou para baixo, -1 para a esquerda ou para cima)
@@ -400,10 +402,13 @@ inicio:
     MOV  R10, 0
     MOV  R9,  N_SONDAS
 
-    EI0					                ; permite interrupções 0
-    EI1					                ; permite interrupções 1
-    EI2					                ; permite interrupções 2
-    EI3					                ; permite interrupções 3
+    MOV  R3, DISPLAYS                     ; endereço do periférico dos displays
+    MOV  [R3], R1                         ; escreve o valor 0 nos displays antes de iniciar o jogo
+
+    EI0					                  ; permite interrupções 0
+    EI1					                  ; permite interrupções 1
+    EI2					                  ; permite interrupções 2
+    EI3					                  ; permite interrupções 3
     EI                      
 
 	; cria processos
@@ -415,10 +420,6 @@ inicio:
 ciclo:
     YIELD
     JMP ciclo
-
-
-
-
 
 
 ; *****************************************************************************
@@ -441,7 +442,7 @@ controlo:
     MOV R6, TECLA_PAUSA_RET_JOGO
     MOV R7, TECLA_TERMINAR_JOGO
     MOV R8, 0
-    MOV R9, -1
+    MOV R9, MENOS_UM
 
     espera_controlo:
         MOV	R1, [tecla_carregada]	    ; bloqueia neste LOCK até uma tecla ser carregada
@@ -462,7 +463,7 @@ controlo:
     CALL cria_processos
 
     jogo_decorre:
-        MOV R0, 0
+        MOV R0, 0                       ; tira os processos do modo de pausa
         MOV [pausa_energia], R0
         MOV R1, pausa_asteroide
         MOV [R1], R0
@@ -516,12 +517,12 @@ controlo:
         MOV [SELECIONA_CENARIO_FUNDO], R0      ; muda o ecrã para o de sem energia
         MOV  R4, CEM
         MOV  [valor_display], R4               ; inicializar o valor do dsplay
-        MOV  R4, 0                              ; coloca o R4 a 0 para não voltar a criar os processos
+        MOV  R4, 0                             ; coloca o R4 a 0 para não voltar a criar os processos
         JMP espera_derrota                     ; pois iria ter o mesmo comportamento
 
     pausa_jogo:
         MOV R1, 1
-        MOV [pausa_energia], R1
+        MOV [pausa_energia], R1                ; para informar os processos do modo de pausa
         MOV R0, pausa_asteroide
         MOV [R0], R1
         ADD R0, 2
@@ -553,6 +554,7 @@ controlo:
         MOV [REP_VIDEO_SOM], R0                 ; inicia o vídeo do fim do jogo
         MOV R0, CENARIO_FIM
         MOV [SELECIONA_CENARIO_FRONTAL], R0    ; coloca o cenário do fim
+
         espera_termina:
             CALL estados_proc                      ; coloca os estados dos processos a 1
             MOV R4, 8
@@ -661,8 +663,6 @@ nave:
         CMP  R4, R7
         JZ   nave
 
-        
-
         JMP  espera_nave
 
 
@@ -723,6 +723,7 @@ sonda:
     espera_tecla_sonda:
         MOV R9, R10			    ; cópia do nº de instância do processo
         SHL R9, 1			    ; multiplica por 2 porque as tabelas são de WORDS
+        MOV R11, R9             ; copia o valor do dobro do nº de instância
 
         MOV	R3, [tecla_carregada]	   ; bloqueia neste LOCK até uma tecla ser carregada
 
@@ -732,6 +733,10 @@ sonda:
                                        ; espera-se até a tecla ser carregada
 
     continua_sonda:
+        MOV  R1, 0
+        MOV  R8, estado_sonda
+        MOV  [R8+R11], R1
+
         MOV  R8, linha_sonda                ; tabela das linhas das sondas
         MOV  R1, [R8+R9]                    ; linha onde está a determinada sonda
                             
@@ -746,7 +751,7 @@ sonda:
 
     CALL som_disparo
 
-    MOV  R8, -5
+    MOV  R8, MENOS_CINCO
     CALL varia_energia
     CALL verifica_energia
 
@@ -769,6 +774,11 @@ sonda:
         INC  R8                          
         CMP  R8, R4                       ; vê se chegou aos limites do alcance máximo da sonda
         JZ   espera_tecla_sonda           ; se chegou, a sonda desaparece
+
+        MOV  R9, estado_sonda
+        MOV  R0, [R9+R11]                 ; coloca o estado do jogo em R0
+        CMP  R0, 0
+        JNZ  espera_tecla_sonda           ; se o estado do jogo não for jogável, o asteroide desaparece
 
         ADD	R1, R5			              ; para desenhar a sonda na nova posição
         ADD	R2, R6
@@ -872,7 +882,6 @@ asteroide:
         JMP espera_asteroide	
 
         colisão_sonda:
-            CALL som_atinge
             CALL apaga_asteroide
             MOV  R5, DEF_ASTEROIDE_NAO_MIN
             MOV  R7, QUATRO
@@ -882,6 +891,7 @@ asteroide:
             JZ  colisão_não_minerável
 
             ; se for minerável:
+            CALL som_atinge_min
             MOV  R8, VINTE_CINCO
             CALL varia_energia          ; incrementa o valor display em 5 unidades
             MOV  R4, DEF_AST_MIN_DEST_1
@@ -894,6 +904,7 @@ asteroide:
             JMP  novo_asteroide
 
             colisão_não_minerável:
+            CALL som_atinge_nao_min
             MOV  R4, DEF_AST_NAO_MIN_DEST
             CALL desenha_asteroide
             CALL atraso
@@ -1306,12 +1317,12 @@ gerar_asteroide:
 
     nao_mineravel:              ; o asteroide fica não minerável
         MOV R1, 0
-        MOV [R2 + R10], R1
+        MOV [R2+R10], R1
         JMP sai_gerar_asteroide
 
     mineravel:                  ; o asteroide fica minerável
         MOV R1, 1
-        MOV [R2 + R10], R1
+        MOV [R2+R10], R1
 
     sai_gerar_asteroide:
         POP R2
@@ -1367,17 +1378,34 @@ som_disparo:
 
 
 ; *****************************************************************************
-; SOM_ATINGE    - toca o som da sonda a atingir um asteroide
+; SOM_ATINGE_MIN    - toca o som da sonda a atingir um asteroide minerável
 ;
-; Entrada(s):   ---
+; Entrada(s):       ---
 ;
-; Saida(s):     ---
+; Saida(s):         ---
 ;
 ; *****************************************************************************
 
-som_atinge:
+som_atinge_min:
     PUSH R0
-    MOV R0, SOM_ATINGE
+    MOV R0, SOM_ATINGE_MIN
+    MOV [INICIA_VIDEO_SOM], R0       ; toca o som
+    POP R0
+    RET
+
+
+; *****************************************************************************
+; SOM_ATINGE_NAO_MIN    - toca o som da sonda a atingir um asteroide não minerável
+;
+; Entrada(s):           ---
+;
+; Saida(s):             ---
+;
+; *****************************************************************************
+
+som_atinge_nao_min:
+    PUSH R0
+    MOV R0, SOM_ATINGE_NAO_MIN
     MOV [INICIA_VIDEO_SOM], R0       ; toca o som
     POP R0
     RET
@@ -1413,7 +1441,7 @@ som_inicio:
 som_jogo:
     PUSH R0
     MOV R0, SOM_JOGO
-    MOV [INICIA_VIDEO_SOM], R0       ; toca o som
+    MOV [REP_VIDEO_SOM], R0       ; toca o som
     POP R0
     RET
 
@@ -1431,7 +1459,7 @@ som_jogo:
 som_fim:
     PUSH R0
     MOV R0, SOM_FIM
-    MOV [INICIA_VIDEO_SOM], R0       ; toca o som
+    MOV [REP_VIDEO_SOM], R0       ; toca o som
     POP R0
     RET
 
@@ -1470,23 +1498,6 @@ som_explosao:
     POP R0
     RET
 
-
-; *****************************************************************************
-; SOM_NICE_WORK - toca o som quando um asteroide minerável é atingido
-;
-; Entrada(s):   ---
-;
-; Saida(s):     ---
-;
-; *****************************************************************************
-
-som_nice_work:
-    PUSH R0
-    MOV R0, SOM_NICE_WORK
-    MOV [INICIA_VIDEO_SOM], R0       ; toca o som
-    POP R0
-    RET
-    
 
 
 ; Rotinas de interrupcao
@@ -1949,7 +1960,17 @@ estados_proc:
     MOV R1, 1
     MOV [estado_energia], R1
     MOV [estado_nave], R1
+
     MOV R0, estado_asteroide
+    MOV [R0], R1
+    ADD R0, 2
+    MOV [R0], R1
+    ADD R0, 2
+    MOV [R0], R1
+    ADD R0, 2
+    MOV [R0], R1
+
+    MOV R0, estado_sonda
     MOV [R0], R1
     ADD R0, 2
     MOV [R0], R1
