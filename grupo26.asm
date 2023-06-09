@@ -400,7 +400,7 @@ inicio:
                                           ; (o valor de R1 não é relevante)
     MOV  R11, N_ASTEROIDES                ; número de asteroides a usar
     MOV  R10, 0
-    MOV  R9,  N_SONDAS
+    MOV  R9,  N_SONDAS                    ; número de sondas a usar
 
     MOV  R3, DISPLAYS                     ; endereço do periférico dos displays
     MOV  [R3], R1                         ; escreve o valor 0 nos displays antes de iniciar o jogo
@@ -435,7 +435,7 @@ PROCESS SP_inicial_controlo
 controlo:
     MOV  R4, 1
     MOV  [APAGA_VIDEO_SOM], R4
-    MOV  [REP_VIDEO_SOM], R1           ; inicia o vídeo 0
+    MOV  [REP_VIDEO_SOM], R1              ; inicia o vídeo de início
     MOV  [SELECIONA_CENARIO_FRONTAL], R1  ; seleciona o cenário frontal número 0
     CALL som_inicio
     MOV R5, TECLA_INICIO_JOGO
@@ -454,9 +454,9 @@ controlo:
     MOV [derrota], R0
     MOV R2, VIDEO_JOGO
     MOV [APAGA_CENARIO], R2             ; aqui o valor do registo é irrelevante
-    MOV [APAGA_VIDEO_SOM], R2
-    MOV [REP_VIDEO_SOM], R2
-    CALL som_jogo
+    MOV [APAGA_VIDEO_SOM], R2           ; aqui o valor do registo é irrelevante
+    MOV [REP_VIDEO_SOM], R2             ; reproduz em loop o vídeo do jogo
+    CALL som_jogo                       ; reproduz em loop o som do jogo
     
     CMP R4, 1
     JNZ jogo_decorre                    ; se R4 for 1, então os processos são criados
@@ -500,19 +500,19 @@ controlo:
         MOV R4, 0                              ; coloca o R4 a 0 para não voltar a criar os processos
         espera_derrota:
             CALL estados_proc                  ; coloca os estados dos processos a 1
-            MOV R4, 8
+            MOV  R4, 8
             CALL obtem_colunas
-            JZ  espera_derrota
+            JZ   espera_derrota
             CALL obtem_valor_tecla
-            MOV R4, 0
-            CMP R2, R5
-            JZ  volta_inicio
-            JMP espera_derrota
+            MOV  R4, 0
+            CMP  R2, R5
+            JZ   volta_inicio
+            JMP  espera_derrota
 
     derrota_energia:
         MOV R0, ECRA_SEM_ENERGIA
-        MOV [APAGA_ECRÃ], R0
-        MOV [APAGA_VIDEO_SOM], R0
+        MOV [APAGA_ECRÃ], R0                   ; aqui o valor do registo é irrelevante
+        MOV [APAGA_VIDEO_SOM], R0              ; aqui o valor do registo é irrelevante
         CALL som_energia
         MOV [SELECIONA_CENARIO_FUNDO], R0      ; muda o ecrã para o de sem energia
         MOV  R4, CEM
@@ -531,9 +531,9 @@ controlo:
         MOV [R0], R1
         ADD R0, 2
         MOV [R0], R1
-        MOV  R0, CENARIO_PAUSA
-        MOV  [SELECIONA_CENARIO_FRONTAL], R0    ; muda o ecrã para o de pausa
-        MOV  [PAUSA_VIDEO_SOM], R0              ; pausar todos os vídeo/som
+        MOV R0, CENARIO_PAUSA
+        MOV [SELECIONA_CENARIO_FRONTAL], R0    ; muda o ecrã para o de pausa
+        MOV [PAUSA_VIDEO_SOM], R0              ; pausar todos os vídeo/som
 
         espera_pausa:
             MOV R4, 8
@@ -547,16 +547,16 @@ controlo:
             JMP espera_pausa
 
     termina:
-        CALL som_fim
+        CALL som_fim                           ; reproduz em loop o som do termino do jogo
         MOV  R0, VIDEO_FIM
-        MOV [APAGA_ECRÃ], R0
-        MOV [APAGA_VIDEO_SOM], R0
-        MOV [REP_VIDEO_SOM], R0                 ; inicia o vídeo do fim do jogo
+        MOV [APAGA_ECRÃ], R0                   ; aqui o valor do registo é irrelevante
+        MOV [APAGA_VIDEO_SOM], R0              ; aqui o valor do registo é irrelevante
+        MOV [REP_VIDEO_SOM], R0                ; inicia o vídeo do fim do jogo
         MOV R0, CENARIO_FIM
         MOV [SELECIONA_CENARIO_FRONTAL], R0    ; coloca o cenário do fim
 
         espera_termina:
-            CALL estados_proc                      ; coloca os estados dos processos a 1
+            CALL estados_proc                  ; coloca os estados dos processos a 1
             MOV R4, 8
             CALL obtem_colunas
             JZ  espera_termina
@@ -596,14 +596,14 @@ teclado:
             CMP R2, R5
             JNZ verificar_termino
             MOV R7, 3
-            MOV [derrota], R7
+            MOV [derrota], R7       ; desbloqueia os processos que aqui estiverem bloqueados
             JMP ha_tecla
 
         verificar_termino:
             CMP R2, R6
             JNZ ha_tecla
             MOV R7, 4
-            MOV [derrota], R7
+            MOV [derrota], R7       ; desbloqueia os processos que aqui estiverem bloqueados
             JMP ha_tecla
 
     proxima_linha:
@@ -631,7 +631,7 @@ PROCESS SP_inicial_nave
 
 nave:
     MOV  R1, 0
-    MOV  [estado_nave], R1
+    MOV  [estado_nave], R1         ; inicializa o valor do estado do processo da nave a 0
     MOV R1, LINHA_NAVE
     MOV R2, COLUNA_NAVE
     MOV R4, DEF_LUZES_NAVE         ; tabela das tabelas dos instrumentos da nave
@@ -654,7 +654,7 @@ nave:
         MOV R5, LARGURA_LUZES_NAVE
         MOV R6, ALTURA_LUZES_NAVE
 
-        MOV  R0, [estado_nave]               ; coloca o estado do jogo em R0
+        MOV  R0, [estado_nave]     ; coloca o estado do jogo em R0
         CMP  R0, 0                 ; se o estado do jogo não for jogável, repõe-se a nave
         JNZ  nave
         
@@ -677,7 +677,7 @@ PROCESS SP_inicial_energia
 
 energia:
     MOV  R2, 0
-    MOV  [estado_energia], R2
+    MOV  [estado_energia], R2           ; inicializa o valor do estado do processo da energia a 0
     MOV  R2, DUZENTOS_CINQUENTA_SEIS    ; 256 que corresponde a 100H
     MOV  R3, DISPLAYS                   ; endereço do periférico dos displays
     MOV  [R3], R2                       ; escreve o valor 100 nos displays
@@ -730,7 +730,7 @@ sonda:
         CMP	R3, R10                    ; a tecla carregada é a correspondente à sonda?
         JZ  continua_sonda
         JMP espera_tecla_sonda         ; se a tecla nao for a correspondente à sonda,
-                                       ; espera-se até a tecla ser carregada
+                                       ; espera-se até uma das teclas serem carregadas
 
     continua_sonda:
         MOV  R1, 0
@@ -893,7 +893,7 @@ asteroide:
             ; se for minerável:
             CALL som_atinge_min
             MOV  R8, VINTE_CINCO
-            CALL varia_energia          ; incrementa o valor display em 5 unidades
+            CALL varia_energia          ; incrementa o valor display em vinte e cinco unidades
             MOV  R4, DEF_AST_MIN_DEST_1
             CALL desenha_asteroide
             CALL atraso
@@ -1268,7 +1268,7 @@ atraso:
 gerar_numero_aleatorio:
     PUSH R1
     MOV  R0, [TEC_COL]       ; lê-se o periférico de entrada obtendo assim valores aleatorios
-    MOV  R1, MASCARA_MAIOR
+    MOV  R1, MASCARA_MAIOR   ; para isolar os 4 bits de maior peso
     AND  R0, R1              ; isola os bits de maior peso
     SHR  R0, CINCO           ; coloca os bits de maior peso nos bits 2 a 0
     POP  R1
@@ -1288,7 +1288,7 @@ gerar_numero_aleatorio:
 gerar_numero_aleatorio_4:
     CALL gerar_numero_aleatorio
     CMP  R0, CINCO
-    JLT  sai_gerar_numero_aleatorio_4
+    JLT  sai_gerar_numero_aleatorio_4   ; quere-se um número inferir a 5
     JMP  gerar_numero_aleatorio_4
 
     sai_gerar_numero_aleatorio_4:
@@ -1749,6 +1749,7 @@ verifica_colisao_nave:
     CMP  R7, R3                         ; compara a primeira coluna do asteroide
                                         ; com a coluna do extremo direito
     JGT  sai_verifica_colisao_nave      ; se não houver colisão, sai da rotina
+
     JMP  ha_colisao
     
     CMP  R5, R1                         ; compara a última linha do asteroide
@@ -1794,7 +1795,6 @@ verifica_colisao_sonda:
     PUSH R8
     PUSH R9
     PUSH R10
-
 
     MOV  R3, VERDE
     MOV  R4, VERMELHO
@@ -1859,18 +1859,19 @@ converte_decimal:
     PUSH R2
     PUSH R3
     PUSH R4
-    MOV  R0, FATOR
-    MOV  R1, 0          ; resultado
+    MOV  R0, FATOR                      ; R0 -> fator: uma potência de 10 (para obter os dígitos)
+                                        ; fator a mil pois são três dígitos
+    MOV  R1, 0                          ; resultado
     MOV  R2, DEZ
 
     espera_converte:
-        MOD  R4, R0
+        MOD  R4, R0                     ; R4 -> número: o valor a converter nesta iteração
         DIV  R0, R2
         MOV  R3, R4
-        DIV  R3, R0                     ; R3 - dígito
-        SHL  R1, 4
-        OR   R1, R3
-        CMP  R0, R2
+        DIV  R3, R0                     ; R3 -> dígito
+        SHL  R1, 4                      ; desloca, para dar espaço ao novo dígito
+        OR   R1, R3                     ; vai compondo o resultado
+        CMP  R0, R2                     ; resultado fica com o valor pretendido
         JLT  sai_converte_decimal
         JMP  espera_converte
 
@@ -1897,8 +1898,8 @@ cria_processos:
     PUSH R9
     MOV  R9, N_SONDAS
 
-    CALL energia                          ; cria o processo energia
-    CALL nave                             ; cria o processo nave
+    CALL energia                        ; cria o processo energia
+    CALL nave                           ; cria o processo nave
 
     loop_asteroides:
         SUB  R11, 1                     ; próximo asteroide
@@ -1930,13 +1931,15 @@ verifica_energia:
     PUSH R1
 
     MOV  R0, [valor_display]
-    CMP  R0, 0
-    JGT  sai_verifica_energia
+    CMP  R0, 0                       ; se o valor da energia for superior a 0, não há derrota
+    JGT  sai_verifica_energia        ; se o valor da energia for inferior ou igual a 0
+                                     ; então ocorre derrota por perda de energia
     MOV  R0, DISPLAYS
     MOV  R1, 0
-    MOV  [R0], R1                    ; coloca os displays a 0
+    MOV  [R0], R1                    ; coloca os displays a 0, mesmo que o valor da energia 
+                                     ; fosse inferior a 0
     MOV  R1, 2
-    MOV  [derrota], R1
+    MOV  [derrota], R1               ; desbloqueia os processos que aqui estiverem bloqueados
 
     sai_verifica_energia:
     POP  R1
