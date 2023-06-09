@@ -15,8 +15,7 @@
 ; Tarefas a realizar:
 ;
 ; - relatório
-; - som piu deixa de acontecer
-; - colisões
+; - colisões - será que o código está bem?
 ; - delay de pausa
 
 
@@ -463,6 +462,8 @@ controlo:
     MOV [APAGA_VIDEO_SOM], R2           ; aqui o valor do registo é irrelevante
     MOV [REP_VIDEO_SOM], R2             ; reproduz em loop o vídeo do jogo
     CALL som_jogo                       ; reproduz em loop o som do jogo
+    MOV  R0, CEM
+    MOV  [valor_display], R0            ; inicializar o valor do display
     
     CMP R4, 1
     JNZ jogo_decorre                    ; se R4 for 1, então os processos são criados
@@ -504,8 +505,6 @@ controlo:
         MOV [APAGA_VIDEO_SOM], R0              ; aqui o valor do registo é irrelevante
         CALL som_energia
         MOV [SELECIONA_CENARIO_FUNDO], R0      ; muda o ecrã para o de sem energia
-        MOV  R4, CEM
-        MOV  [valor_display], R4               ; inicializar o valor do dsplay
         MOV  R4, 0                             ; coloca o R4 a 0 para não voltar a criar os processos
         JMP  espera_termina_ou_derrota         
 
