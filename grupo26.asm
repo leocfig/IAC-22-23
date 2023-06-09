@@ -11,13 +11,13 @@
 ; *
 ; *********************************************************************
 
+
 ; Tarefas a realizar:
 ;
 ; - relatório
-; - yield bem feito
 ; - som piu deixa de acontecer
 ; - colisões
-; - pausa de nave?
+; - delay de pausa
 
 
 ; **********************************************************************
@@ -37,7 +37,9 @@ SETE                    EQU 7
 DEZ                     EQU 10
 CATORZE                 EQU 14
 VINTE_CINCO             EQU 25
+VINTE_NOVE              EQU 29
 TRINTA_DOIS             EQU 32
+CINQUENTA_NOVE          EQU 59
 SESSENTA_QUATRO         EQU 64
 CEM                     EQU 100
 DUZENTOS_CINQUENTA_SEIS EQU 256         
@@ -69,21 +71,21 @@ ALCANCE_MAX    			EQU 12		    ; número máximo de movimentos das sondas
 
 VIDEO_COMECO            EQU 0           ; video de comeco corresponde ao primeiro video (video/som numero 0)
 VIDEO_JOGO              EQU 1           ; video de fundo enquanto o jogo decorre corresponde ao segundo video (video/som numero 1)
-VIDEO_FIM               EQU 2           ; video de fundo enquanto o jogo decorre corresponde ao terceiro video (video/som numero 2)
+VIDEO_FIM               EQU 2           ; video de fundo enquanto o jogo foi terminado, corresponde ao terceiro video (video/som numero 2)
 SOM_DISPARO             EQU 3           ; som do disparo, corresponde ao primeiro som (video/som numero 3)
-SOM_ATINGE_MIN          EQU 4           ; som da sonda a atingir um asteroide, corresponde ao segundo som (video/som numero 4)
-SOM_ATINGE_NAO_MIN      EQU 5           ; som da sonda a atingir um asteroide, corresponde ao segundo som (video/som numero 4)
-SOM_FIM                 EQU 6           ; som quando o jogo é terminado, corresponde ao terceiro som (video/som numero 5)
-SOM_EXPLOSAO            EQU 7           ; som da explosão, corresponde ao quarto som (video/som numero 6)
-SOM_JOGO                EQU 8
-SOM_ENERGIA             EQU 9
-SOM_INICIO              EQU 10
+SOM_ATINGE_MIN          EQU 4           ; som da sonda a atingir um asteroide minerável, corresponde ao segundo som (video/som numero 4)
+SOM_ATINGE_NAO_MIN      EQU 5           ; som da sonda a atingir um asteroide não minerável, corresponde ao terceiro som (video/som numero 5)
+SOM_FIM                 EQU 6           ; som quando o jogo é terminado, corresponde ao quarto som (video/som numero 6)
+SOM_EXPLOSAO            EQU 7           ; som da explosão com a nave, corresponde ao quarto som (video/som numero 7)
+SOM_JOGO                EQU 8           ; som do jogo, corresponde ao quinto som (video/som numero 8)
+SOM_ENERGIA             EQU 9           ; som que ocorre qunado há a perda de energia, corresponde ao sexto som (video/som numero 9)
+SOM_INICIO              EQU 10          ; som do início, antes do começo do jogo, corresponde ao sétimo som (video/som numero 10)
 
 CENARIO_COMECO          EQU 0           ; cenario frontal de comeco corresponde à primeira imagem (imagem numero 0)
 CENARIO_PAUSA           EQU 1           ; cenario frontal de pausa corresponde à segunda imagem (imagem numero 1)
 ECRA_DERROTA            EQU 2           ; ecra de derrota por colisão, corresponde à terceira imagem (imagem numero 2)
 ECRA_SEM_ENERGIA        EQU 3           ; ecra de derrota por falta de energia, corresponde à quarta imagem (imagem numero 3)
-CENARIO_FIM             EQU 4           ; cenario frontal de pausa corresponde à quinta imagem (imagem numero 4)
+CENARIO_FIM             EQU 4           ; cenario frontal de término de jogo corresponde à quinta imagem (imagem numero 4)
 
 
 ; Comandos
@@ -173,12 +175,16 @@ SP_inicial_sonda:		                    ; este é o endereço (2200H) com que o S
 SP_inicial_asteroide:	                    ; este é o endereço (2400H) com que o SP deste processo vai ser inicializado
 
 
+; tabela das interrupções:
+
 tab:
     WORD int_mover_asteroide         ; rotina de atendimento da interrupção 0
     WORD int_mover_sonda             ; rotina de atendimento da interrupção 1
     WORD int_energia                 ; rotina de atendimento da interrupção 2
     WORD int_nave                    ; rotina de atendimento da interrupção 3
 
+
+; variáveis:
 
 evento_int_mover_ast:   LOCK  0		 ; LOCK para a rotina de interrupção comunicar ao processo do asteroide
 evento_int_mover_sonda: LOCK  0		 ; LOCK para a rotina de interrupção comunicar ao processo da sonda
@@ -188,12 +194,14 @@ evento_int_nave:        LOCK  0		 ; LOCK para a rotina de interrupção comunica
 tecla_carregada:        LOCK  0	     ; LOCK para o teclado comunicar aos restantes processos que tecla detetou
 derrota:                LOCK  0      ; LOOK que indica se o jogo terminou e como terminou:
                                      ; 1 -> colisão; 2 -> energia; 3 -> pausa; 4 -> término do jogo
-estado_energia:         WORD  0      ; 0 -> jogo a decorrer; 1 -> jogo interrompido
-estado_nave:            WORD  0      ; 0 -> jogo a decorrer; 1 -> jogo interrompido
-pausa_energia:          WORD  0      ; 0 -> jogo a decorrer; 1 -> jogo em pausa
+estado_energia:         WORD  0      ; indica no processo de energia se é necessário reiniciar o processo (0 -> não é necessário; 1 -> necessário)
+estado_nave:            WORD  0      ; indica no processo de nave se é necessário reiniciar o processo (0 -> não é necessário; 1 -> necessário)
+pausa_teclado:          WORD  0      ; indica se no processo do teclado a tecla D foi premida
+termina_teclado:        WORD  0      ; indica se no processo do teclado a tecla E foi premida
+pausa_energia:          WORD  0      ; indica ao processo da energia se é necessário ficar em pausa (0 -> não é necessário; 1 -> necessário)
+pausa_nave:             WORD  0      ; indica ao processo da nave se é necessário ficar em pausa (0 -> não é necessário; 1 -> necessário)
 colisao_sonda_ast:      WORD  4      ; guarda o valor do asteroide que colidiu com uma sonda ou quatro se não colidiu
 valor_display:          WORD  0      ; variavel que guarda o valor do display
-
 
 
 PLACE		            0800H
@@ -331,26 +339,26 @@ coluna_asteroide:  ; coluna onde cada um dos quatro asteroides está (inicializa
     WORD 0
     WORD 0
 
-
 tipo_asteroide:     ; 0 para asteroides não mineráveis e 1 para asteroides mineráveis
     WORD 0
     WORD 0
     WORD 0
     WORD 0
 
-ecra_asteroide:
+ecra_asteroide:     ; ecrã onde cada um dos quatro asteroides foi desenhado
     WORD 0
     WORD 1
     WORD 2
     WORD 3
 
-estado_asteroide:   ; 0 para jogo a decorrer e 1 para jogo terminado
+estado_asteroide:   ; variáveis que indicam no processo dos asteroides se é necessário reiniciar o processo
     WORD 0
     WORD 0
     WORD 0
     WORD 0
 
-pausa_asteroide:    ; 0 para jogo a decorrer e 1 para jogo pausado
+pausa_asteroide:    ; indica a cada instância dos processos dos asteroides se é 
+                    ; necessário ficar em pausa (0 -> não é necessário; 1 -> necessário)
     WORD 0
     WORD 0
     WORD 0
@@ -367,18 +375,16 @@ coluna_sonda:  ; coluna onde cada uma das sondas está
     WORD COLUNA_SONDA_MEIO
     WORD COLUNA_SONDA_DIR
 
-estado_sonda:
+estado_sonda:  ; variáveis que indicam no processo das sondas se é necessário reiniciar o processo
     WORD 0
     WORD 0
     WORD 0
     WORD 0
-
 
 sentido_movimento_sonda:	; sentido movimento inicial de cada sonda (+1 para a direita ou para baixo, -1 para a esquerda ou para cima)
 	WORD -1, -1
 	WORD -1, 0
 	WORD -1, 1
-
 
 
 
@@ -403,13 +409,13 @@ inicio:
     MOV  R9,  N_SONDAS                    ; número de sondas a usar
 
     MOV  R3, DISPLAYS                     ; endereço do periférico dos displays
-    MOV  [R3], R1                         ; escreve o valor 0 nos displays antes de iniciar o jogo
+    MOV  [R3], R1                         ; escreve o valor 0 nos displays antes de o jogo ser incializado
 
     EI0					                  ; permite interrupções 0
     EI1					                  ; permite interrupções 1
     EI2					                  ; permite interrupções 2
     EI3					                  ; permite interrupções 3
-    EI                      
+    EI                                    ; permite interrupções (geral)
 
 	; cria processos
 	CALL teclado			              ; cria o processo teclado
@@ -437,7 +443,7 @@ controlo:
     MOV  [APAGA_VIDEO_SOM], R4
     MOV  [REP_VIDEO_SOM], R1              ; inicia o vídeo de início
     MOV  [SELECIONA_CENARIO_FRONTAL], R1  ; seleciona o cenário frontal número 0
-    CALL som_inicio
+    CALL som_inicio                       ; reproduz em loop o som do início
     MOV R5, TECLA_INICIO_JOGO
     MOV R6, TECLA_PAUSA_RET_JOGO
     MOV R7, TECLA_TERMINAR_JOGO
@@ -464,15 +470,7 @@ controlo:
 
     jogo_decorre:
         MOV R0, 0                       ; tira os processos do modo de pausa
-        MOV [pausa_energia], R0
-        MOV R1, pausa_asteroide
-        MOV [R1], R0
-        ADD R1, 2
-        MOV [R1], R0
-        ADD R1, 2
-        MOV [R1], R0
-        ADD R1, 2
-        MOV [R1], R0
+        CALL pausa_proc
 
     espera_estado:
         MOV R0, [derrota]                   ; fica bloqueado neste LOCK
@@ -498,16 +496,7 @@ controlo:
         CALL som_explosao
         MOV [SELECIONA_CENARIO_FRONTAL], R0    ; muda o ecrã para o de colisão
         MOV R4, 0                              ; coloca o R4 a 0 para não voltar a criar os processos
-        espera_derrota:
-            CALL estados_proc                  ; coloca os estados dos processos a 1
-            MOV  R4, 8
-            CALL obtem_colunas
-            JZ   espera_derrota
-            CALL obtem_valor_tecla
-            MOV  R4, 0
-            CMP  R2, R5
-            JZ   volta_inicio
-            JMP  espera_derrota
+        JMP espera_termina_ou_derrota
 
     derrota_energia:
         MOV R0, ECRA_SEM_ENERGIA
@@ -518,33 +507,28 @@ controlo:
         MOV  R4, CEM
         MOV  [valor_display], R4               ; inicializar o valor do dsplay
         MOV  R4, 0                             ; coloca o R4 a 0 para não voltar a criar os processos
-        JMP espera_derrota                     ; pois iria ter o mesmo comportamento
+        JMP  espera_termina_ou_derrota         
 
     pausa_jogo:
-        MOV R1, 1
-        MOV [pausa_energia], R1                ; para informar os processos do modo de pausa
-        MOV R0, pausa_asteroide
-        MOV [R0], R1
-        ADD R0, 2
-        MOV [R0], R1
-        ADD R0, 2
-        MOV [R0], R1
-        ADD R0, 2
-        MOV [R0], R1
+        MOV R0, 1                              ; coloca os processos do modo de pausa
+        CALL pausa_proc
         MOV R0, CENARIO_PAUSA
         MOV [SELECIONA_CENARIO_FRONTAL], R0    ; muda o ecrã para o de pausa
-        MOV [PAUSA_VIDEO_SOM], R0              ; pausar todos os vídeo/som
+        MOV [PAUSA_VIDEO_SOM], R0              ; pausa-se todos os vídeo/som
 
         espera_pausa:
-            MOV R4, 8
-            CALL obtem_colunas
-            JZ  espera_pausa
-            CALL obtem_valor_tecla
-            CMP R2, R6
-            JZ  jogo_decorre
-            CMP R2, R7
-            JZ  termina
-            JMP espera_pausa
+            YIELD
+            MOV R0, [pausa_teclado]
+            CMP R0, 1
+            JZ  espera_pausa                   ; só sai daqui quando no teclado o valor da
+                                               ; da variável da pausa passa para 0
+            MOV R0, [termina_teclado]
+            CMP R0, 1
+            JZ  termina                        ; se o termina estiver a 1, é para terminar o jogo
+                                               ; se o termina estiver a 0, é porque é para despausar
+            MOV [APAGA_CENARIO], R0            ; apaga o cenário frontal
+            MOV [CONTI_VIDEO_SOM], R0          ; continua a reproduz de todos os vídeos e sons colocados em pausa anteriormente
+            JMP jogo_decorre                   ; retoma o jogo
 
     termina:
         CALL som_fim                           ; reproduz em loop o som do termino do jogo
@@ -555,16 +539,19 @@ controlo:
         MOV R0, CENARIO_FIM
         MOV [SELECIONA_CENARIO_FRONTAL], R0    ; coloca o cenário do fim
 
-        espera_termina:
+        espera_termina_ou_derrota:             ; o comportamento esperado pelo utilizado pelo utilizador
+                                               ; é o mesmo se ocorrer uma derrota ou um término do jogo
             CALL estados_proc                  ; coloca os estados dos processos a 1
             MOV R4, 8
-            CALL obtem_colunas
-            JZ  espera_termina
+            CALL obtem_colunas                 ; neste caso, por espera_termina ser um ciclo bloqueante,
+                                               ; pode-se chamar uma rotina do teclado sem interferir com 
+                                               ; o processo do teclado em si
+            JZ  espera_termina_ou_derrota
             CALL obtem_valor_tecla
-            MOV R4, 0
+            MOV R4, 0 
             CMP R2, R5
             JZ  volta_inicio
-            JMP espera_termina
+            JMP espera_termina_ou_derrota
 
         
 ; *****************************************************************************
@@ -583,9 +570,12 @@ teclado:
     MOV  R4, LINHA_INICIAL          ; começa-se a testar a primeira linha
     MOV  R5, TECLA_PAUSA_RET_JOGO
     MOV  R6, TECLA_TERMINAR_JOGO
+    MOV  R9, TECLA_INICIO_JOGO
     
     espera_tecla:                   ; neste ciclo espera-se até uma tecla ser premida
         WAIT				        ; ter um ponto de fuga (aqui pode comutar para outro processo)
+        MOV  R0, 0
+        MOV  [termina_teclado], R0
         CALL obtem_colunas          ; obtem as colunas da determinada linha
         CMP  R0, 0                  ; há tecla premida?
         JZ   proxima_linha          ; nao havendo tecla premida
@@ -595,6 +585,12 @@ teclado:
         verificar_pausa:
             CMP R2, R5
             JNZ verificar_termino
+            MOV R7, [pausa_teclado]
+            MOV R8, 1
+            SUB R8, R7              ; 1 menos o valor na variável da pausa_teclado é o novo valor da variável pausa_teclado
+            MOV [pausa_teclado], R8 ; guarda-se o valor na variável
+            CMP R8, 1               ; se esse valor for 1, significa que é para pausar o jogo, e
+            JNZ ha_tecla            ; só se for para pausar o jogo é que se vai desbloquear o processo do controlo
             MOV R7, 3
             MOV [derrota], R7       ; desbloqueia os processos que aqui estiverem bloqueados
             JMP ha_tecla
@@ -602,6 +598,10 @@ teclado:
         verificar_termino:
             CMP R2, R6
             JNZ ha_tecla
+            MOV R8, 1
+            MOV [termina_teclado], R8
+            MOV R8, 0
+            MOV [pausa_teclado], R8 ; se é para terminar o jogo, já não se está em pausa
             MOV R7, 4
             MOV [derrota], R7       ; desbloqueia os processos que aqui estiverem bloqueados
             JMP ha_tecla
@@ -644,6 +644,11 @@ nave:
     CALL desenha_nave
 
     espera_nave:
+        YIELD
+        MOV  R9, [pausa_nave]
+        CMP  R9, 1
+        JZ   espera_nave
+
         ADD R4, 2
 
         MOV R9, [evento_int_nave]  ; este processo é aqui bloqueado, e só vai ser
@@ -685,6 +690,7 @@ energia:
     MOV  [valor_display], R2
 
     espera_energia:
+        YIELD
         MOV  R2, [pausa_energia]
         CMP  R2, 1
         JZ   espera_energia
@@ -844,16 +850,16 @@ asteroide:
             MOV  R4, DEF_ASTEROIDE_MIN      ; endereço da tabela que define o asteroide
 
     espera_asteroide:
-    
-        MOV  R3, pausa_asteroide
-        MOV  R0, [R3+R10]
-        CMP  R0, 1
-        JZ   espera_asteroide
-
         MOV [R9+R10], R1                ; atualizar os valores na tabela da linha do asteroide
         MOV [R8+R10], R2                ; atualizar os valores na tabela da coluna do asteroide
 
         CALL desenha_asteroide		    ; desenha o asteroide a partir da tabela, na sua posição atual
+        
+        YIELD
+        MOV  R3, pausa_asteroide
+        MOV  R0, [R3+R10]
+        CMP  R0, 1
+        JZ   espera_asteroide
 
         CALL verifica_colisao_nave      ; verifica se o asteroide colidiu com a nave
 
@@ -911,6 +917,9 @@ asteroide:
             CALL apaga_asteroide
             JMP  novo_asteroide
 
+
+
+; Rotinas
 
 ; *****************************************************************************
 ; OBTEM_COLUNAS: Lê as teclas de uma determinada linha do teclado e retorna o 
@@ -1446,7 +1455,6 @@ som_jogo:
     RET
 
 
-
 ; *****************************************************************************
 ; SOM_FIM       - toca o som quando o jogo é terminado
 ;
@@ -1481,7 +1489,6 @@ som_energia:
     RET
 
 
-
 ; *****************************************************************************
 ; SOM_EXPLOSAO  - toca o som quando a nave explode
 ;
@@ -1497,7 +1504,6 @@ som_explosao:
     MOV [INICIA_VIDEO_SOM], R0       ; toca o som
     POP R0
     RET
-
 
 
 ; Rotinas de interrupcao
@@ -1593,25 +1599,25 @@ acao_asteroide:
         JMP  sai_acao_asteroide
 
     acao_1:                     ; caso em que o asteroide aparece no canto superior direito
-        MOV  R2, 59             ; a coluna inicial deste asteroide
+        MOV  R2, CINQUENTA_NOVE ; a coluna inicial deste asteroide
         MOV  R5, 1              ; o sentido de movimento da linha deste asteroide
         MOV  R6, -1             ; o sentido de movimento da coluna deste asteroide
         JMP  sai_acao_asteroide
 
     acao_2:                     ; caso em que o asteroide aparece no meio e desce na vertical
-        MOV  R2, 29             ; a coluna inicial deste asteroide
+        MOV  R2, VINTE_NOVE     ; a coluna inicial deste asteroide
         MOV  R5, 1              ; o sentido de movimento da linha deste asteroide
         MOV  R6, 0              ; o sentido de movimento da coluna deste asteroide
         JMP  sai_acao_asteroide
         
     acao_3:                     ; caso em que o asteroide aparece no meio e desloca-se 45º para a direita
-        MOV  R2, 29             ; a coluna inicial deste asteroide
+        MOV  R2, VINTE_NOVE     ; a coluna inicial deste asteroide
         MOV  R5, 1              ; o sentido de movimento da linha deste asteroide
         MOV  R6, 1              ; o sentido de movimento da coluna deste asteroide
         JMP  sai_acao_asteroide
 
     acao_4:                     ; caso em que o asteroide aparece no meio e desloca-se 45º para a esquerda
-        MOV  R2, 29             ; a coluna inicial deste asteroide
+        MOV  R2, VINTE_NOVE     ; a coluna inicial deste asteroide
         MOV  R5, 1              ; o sentido de movimento da linha deste asteroide
         MOV  R6, -1             ; o sentido de movimento da coluna deste asteroide
 
@@ -1652,19 +1658,19 @@ inicia_asteroide:
         JMP  sai_inicia_asteroide
 
     inicia_1:                   ; caso em que o asteroide aparece no meio e desloca-se 45º para a esquerda
-        MOV  R2, 29             ; a coluna inicial deste asteroide
+        MOV  R2, VINTE_NOVE     ; a coluna inicial deste asteroide
         MOV  R5, 1              ; o sentido de movimento da linha deste asteroide
         MOV  R6, -1             ; o sentido de movimento da coluna deste asteroide; caso em que o asteroide aparece no canto superior direito
         JMP  sai_inicia_asteroide
 
     inicia_2:                   ; caso em que o asteroide aparece no meio e desce na vertical
-        MOV  R2, 29             ; a coluna inicial deste asteroide
+        MOV  R2, VINTE_NOVE     ; a coluna inicial deste asteroide
         MOV  R5, 1              ; o sentido de movimento da linha deste asteroide
         MOV  R6, 0              ; o sentido de movimento da coluna deste asteroide
         JMP  sai_inicia_asteroide
         
     inicia_3:                   ; caso em que o asteroide aparece no meio e desloca-se 45º para a direita
-        MOV  R2, 29             ; a coluna inicial deste asteroide
+        MOV  R2, VINTE_NOVE     ; a coluna inicial deste asteroide
         MOV  R5, 1              ; o sentido de movimento da linha deste asteroide
         MOV  R6, 1              ; o sentido de movimento da coluna deste asteroide; caso em que o asteroide aparece no canto superior direito
 
@@ -1842,7 +1848,6 @@ verifica_colisao_sonda:
     RET
 
 
-
 ; *****************************************************************************
 ; CONVERTE_DECIMAL: Obtem-se um número hexadecimal cujos nibbles (conjuntos de 4
 ;                   bits) sejam os dígitos do número decimal correspondente
@@ -1881,7 +1886,6 @@ converte_decimal:
         POP  R2
         POP  R0
         RET
-
 
 
 ; *****************************************************************************
@@ -1948,7 +1952,8 @@ verifica_energia:
 
 
 ; *****************************************************************************
-; ESTADOS_PROC:     Coloca os estados dos processos a 1
+; ESTADOS_PROC:     Coloca os estados dos processos a 1, para indicar aos
+;                   processos que é necessário reiniciar
 ;
 ; Entrada(s):       ---
 ;
@@ -1981,6 +1986,34 @@ estados_proc:
     MOV [R0], R1
     ADD R0, 2
     MOV [R0], R1
+
+    POP R1
+    RET
+
+
+; *****************************************************************************
+; PAUSA_PROC:       Coloca os processos em pausa ou despausa, dependendo do 
+;                   argumento (0-despausa; 1-pausa)
+;
+; Entrada(s):       R0
+;
+; Saida(s): 	    ---
+;
+; *****************************************************************************
+
+pausa_proc:
+    PUSH R1
+
+    MOV [pausa_energia], R0
+    MOV [pausa_nave], R0
+    MOV R1, pausa_asteroide
+    MOV [R1], R0
+    ADD R1, 2
+    MOV [R1], R0
+    ADD R1, 2
+    MOV [R1], R0
+    ADD R1, 2
+    MOV [R1], R0
 
     POP R1
     RET
