@@ -466,8 +466,7 @@ controlo:
     MOV [APAGA_VIDEO_SOM], R2           ; aqui o valor do registo é irrelevante
     MOV [REP_VIDEO_SOM], R2             ; reproduz em loop o vídeo do jogo
     CALL som_jogo                       ; reproduz em loop o som do jogo
-    MOV  R0, CEM
-    MOV  [valor_display], R0            ; inicializar o valor do display
+    CALL inicia_disp                    ; inicia o display
     
     CMP R4, 1
     JNZ jogo_decorre                    ; se R4 for 1, então os processos são criados
@@ -686,11 +685,7 @@ PROCESS SP_inicial_energia
 energia:
     MOV  R2, 0
     MOV  [estado_energia], R2           ; inicializa o valor do estado do processo da energia a 0
-    MOV  R2, DUZENTOS_CINQUENTA_SEIS    ; 256 que corresponde a 100H
-    MOV  R3, DISPLAYS                   ; endereço do periférico dos displays
-    MOV  [R3], R2                       ; escreve o valor 100 nos displays
-    MOV  R2, CEM
-    MOV  [valor_display], R2
+    CALL inicia_disp                    ; inicia o display
 
     espera_energia:
         
@@ -733,6 +728,12 @@ sonda:
         MOV R9, R10			    ; cópia do nº de instância do processo
         SHL R9, 1			    ; multiplica por 2 porque as tabelas são de WORDS
         MOV R11, R9             ; copia o valor do dobro do nº de instância
+
+        YIELD
+        MOV  R3, pausa_sonda
+        MOV  R0, [R3+R11]
+        CMP  R0, 1                     ; se está a 1, significa que o jogo foi pausado,
+        JZ   espera_tecla_sonda        ; fica à espera de ficar a 0 para retomar o jogo
 
         MOV	R3, [tecla_carregada]	   ; bloqueia neste LOCK até uma tecla ser carregada
 
@@ -2029,4 +2030,29 @@ pausa_proc:
     MOV [R1], R0
 
     POP R1
+    RET
+
+
+; *****************************************************************************
+; INICIA_DISP:      Inicializa o valor da variável do display e o valor apresentado no display
+;
+; Entrada(s):       ---
+;
+; Saida(s): 	    ---
+;
+; *****************************************************************************
+
+inicia_disp:
+
+    PUSH R0
+    PUSH R2
+
+    MOV  R2, DUZENTOS_CINQUENTA_SEIS    ; 256 que corresponde a 100H
+    MOV  R0, DISPLAYS                   ; endereço do periférico dos displays
+    MOV  [R0], R2                       ; escreve o valor 100 nos displays
+    MOV  R0, CEM
+    MOV  [valor_display], R0            ; inicializar o valor do display
+
+    POP R2
+    POP R0
     RET
