@@ -643,16 +643,16 @@ nave:
     CALL desenha_nave
 
     espera_nave:
+        
+        MOV R9, [evento_int_nave]  ; este processo é aqui bloqueado, e só vai ser
+                                   ; desbloqueado com a respetiva rotina de interrupção
+        
         YIELD
         MOV  R9, [pausa_nave]
         CMP  R9, 1
         JZ   espera_nave
-
+        
         ADD R4, 2
-
-        MOV R9, [evento_int_nave]  ; este processo é aqui bloqueado, e só vai ser
-                                   ; desbloqueado com a respetiva rotina de interrupção
-
         MOV R1, LINHA_NAVE_LUZES
         MOV R2, COLUNA_NAVE_LUZES
         MOV R5, LARGURA_LUZES_NAVE
@@ -689,19 +689,19 @@ energia:
     MOV  [valor_display], R2
 
     espera_energia:
+        
+        MOV  R9, [evento_int_energia]   ; este processo é aqui bloqueado, e só vai ser
+                                        ; desbloqueado com a respetiva rotina de interrupção
         YIELD
         MOV  R2, [pausa_energia]
         CMP  R2, 1
         JZ   espera_energia
-
-        MOV  R9, [evento_int_energia]   ; este processo é aqui bloqueado, e só vai ser
-                                        ; desbloqueado com a respetiva rotina de interrupção
-
         MOV  R8, -3
+
         CALL varia_energia              ; subtrai 3 ao valor do display quando a interrrupção ocorre
         CALL verifica_energia
 
-        MOV  R0, [estado_energia]                    ; coloca o estado do jogo em R0
+        MOV  R0, [estado_energia]       ; coloca o estado do jogo em R0
         CMP  R0, 0
         JNZ  energia                    ; se o estado do jogo não for jogável, repõe-se a energia
 
@@ -854,17 +854,17 @@ asteroide:
 
         CALL desenha_asteroide		    ; desenha o asteroide a partir da tabela, na sua posição atual
         
+        CALL verifica_colisao_nave      ; verifica se o asteroide colidiu com a nave
+
+        MOV  R0, [evento_int_mover_ast] ; este processo é aqui bloqueado, e só vai ser
+                                        ; desbloqueado com a respetiva rotina de interrupção
+
         YIELD
         MOV  R3, pausa_asteroide
         MOV  R0, [R3+R10]
         CMP  R0, 1
         JZ   espera_asteroide
 
-        CALL verifica_colisao_nave      ; verifica se o asteroide colidiu com a nave
-
-        MOV  R0, [evento_int_mover_ast] ; este processo é aqui bloqueado, e só vai ser
-                                        ; desbloqueado com a respetiva rotina de interrupção
-        
         CALL apaga_asteroide     		; apaga o asteroide na sua posição corrente
 
         MOV  R7, [colisao_sonda_ast]    
