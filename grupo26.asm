@@ -12,13 +12,6 @@
 ; *********************************************************************
 
 
-; Tarefas a realizar:
-;
-; - relatório
-; - colisões - será que o código está bem?
-; - delay de pausa
-
-
 ; **********************************************************************
 ; * Constantes
 ; **********************************************************************
@@ -199,7 +192,6 @@ pausa_teclado:          WORD  0      ; indica se no processo do teclado a tecla 
 termina_teclado:        WORD  0      ; indica se no processo do teclado a tecla E foi premida
 pausa_energia:          WORD  0      ; indica ao processo da energia se é necessário ficar em pausa (0 -> não é necessário; 1 -> necessário)
 pausa_nave:             WORD  0      ; indica ao processo da nave se é necessário ficar em pausa (0 -> não é necessário; 1 -> necessário)
-colisao_sonda_ast:      WORD  4      ; guarda o valor do asteroide que colidiu com uma sonda ou quatro se não colidiu
 valor_display:          WORD  0      ; variavel que guarda o valor do display
 
 
@@ -350,6 +342,12 @@ ecra_asteroide:     ; ecrã onde cada um dos quatro asteroides foi desenhado
     WORD 2
     WORD 3
 
+asteroide_sonda:    ; indica se o asteroide colidiu com uma sonda (0 -> não colidiu; 1 -> colidiu)
+    WORD 0
+    WORD 0
+    WORD 0
+    WORD 0
+
 estado_asteroide:   ; variáveis que indicam no processo dos asteroides se é necessário reiniciar o processo
     WORD 0
     WORD 0
@@ -385,6 +383,12 @@ sentido_movimento_sonda:	; sentido movimento inicial de cada sonda (+1 para a di
 	WORD -1, 0
 	WORD -1, 1
 
+pausa_sonda:        ; indica a cada instância dos processos das sondas se é 
+                    ; necessário ficar em pausa (0 -> não é necessário; 1 -> necessário)
+    WORD 0
+    WORD 0
+    WORD 0
+    WORD 0
 
 
 ; **********************************************************************
@@ -649,9 +653,9 @@ nave:
         
         YIELD
         MOV  R9, [pausa_nave]
-        CMP  R9, 1
-        JZ   espera_nave
-        
+        CMP  R9, 1                 ; se está a 1, significa que o jogo foi pausado,
+        JZ   espera_nave           ; fica à espera de ficar a 0 para retomar o jogo
+
         ADD R4, 2
         MOV R1, LINHA_NAVE_LUZES
         MOV R2, COLUNA_NAVE_LUZES
@@ -694,8 +698,8 @@ energia:
                                         ; desbloqueado com a respetiva rotina de interrupção
         YIELD
         MOV  R2, [pausa_energia]
-        CMP  R2, 1
-        JZ   espera_energia
+        CMP  R2, 1                      ; se está a 1, significa que o jogo foi pausado,
+        JZ   espera_energia             ; fica à espera de ficar a 0 para retomar o jogo
         MOV  R8, -3
 
         CALL varia_energia              ; subtrai 3 ao valor do display quando a interrrupção ocorre
@@ -763,7 +767,7 @@ sonda:
     MOV  R8, 0                            ; inicializa o contador de movimentos da sonda a 0                  
 
     espera_sonda:
-        CALL desenha_sonda              
+        CALL desenha_sonda 
 
         CALL verifica_colisao_sonda       ; verifica se a sonda colidiu com algum asteroide
         CMP  R7, 1                        ; colidiu com algum asteroide?
@@ -771,6 +775,12 @@ sonda:
 
         MOV  R0, [evento_int_mover_sonda] ; este processo é aqui bloqueado, e só vai ser
                                           ; desbloqueado com a respetiva rotina de interrupção
+        YIELD
+        MOV  R3, pausa_sonda
+        MOV  R0, [R3+R11]
+        CMP  R0, 1                        ; se está a 1, significa que o jogo foi pausado,
+        JZ   espera_sonda                 ; fica à espera de ficar a 0 para retomar o jogo
+
         apaga_colisao:
             CALL apaga_sonda              ; apaga o asteroide na sua posição corrente
             CMP  R7, 1
@@ -808,7 +818,6 @@ asteroide:
 
     MOV R10, R11			; cópia do nº de instância do processo
 	SHL R10, 1			    ; multiplica por 2 porque as tabelas são de WORDS
-    MOV R7,  QUATRO
 
     novo_asteroide_seq:             ; usado no início ou reinício do jogo
         MOV  R1, 0
@@ -823,7 +832,6 @@ asteroide:
         CALL acao_asteroide         ; determina a ação aleatória a tomar pelo asteroide
 
     continua_asteroide:
-
         MOV  R9, linha_asteroide    ; tabela das linhas dos asteroides
         MOV  [R9+R10], R1           ; inicializar o valores na tabela da linha do asteroide
 
@@ -862,16 +870,15 @@ asteroide:
         YIELD
         MOV  R3, pausa_asteroide
         MOV  R0, [R3+R10]
-        CMP  R0, 1
-        JZ   espera_asteroide
+        CMP  R0, 1                      ; se está a 1, significa que o jogo foi pausado, 
+        JZ   espera_asteroide           ; fica à espera de ficar a 0 para retomar o jogo
 
         CALL apaga_asteroide     		; apaga o asteroide na sua posição corrente
 
-        MOV  R7, [colisao_sonda_ast]    
-        CMP  R7, R11                    ; verifica se a instância deste processo coincide com a instância
-                                        ; do asteroide que colidiu com uma sonda
-        
-        JZ   colisão_sonda              ; se houve colisão, o asteroide não volta a ser desenhado
+        MOV  R7, asteroide_sonda
+        MOV  R3, [R7+R10]    
+        CMP  R3, 1                      ; verifica se a instância deste processo colidiu com uma sonda
+        JZ   colisão_sonda              ; se houve colisão
 
         CALL testa_limites              ; vê se chegou aos limites do ecrã
         CMP  R7, 1                      ; asteroide saiu do ecrã?
@@ -888,10 +895,10 @@ asteroide:
 
         colisão_sonda:
             CALL apaga_asteroide
+            MOV  R5, 0
+            MOV  [R7+R10], R5           ; volta a inicializar a 0 na tabela do "asteroide_sonda"
             MOV  R5, DEF_ASTEROIDE_NAO_MIN
-            MOV  R7, QUATRO
-            MOV  [colisao_sonda_ast], R7
-
+            
             CMP R4, R5
             JZ  colisão_não_minerável
 
@@ -1798,13 +1805,11 @@ verifica_colisao_sonda:
     PUSH R5
     PUSH R6
     PUSH R8
-    PUSH R9
     PUSH R10
 
     MOV  R3, VERDE
     MOV  R4, VERMELHO
     MOV  R7, 0                                
-    MOV  R9, QUATRO
 
     MOV  [DEFINE_LINHA],  R1		; seleciona a linha
 	MOV  [DEFINE_COLUNA], R2		; seleciona a coluna
@@ -1828,14 +1833,15 @@ verifica_colisao_sonda:
     JMP sai_verifica_colisao_sonda
 
     houve_colisao:
-        MOV  R7, 1
-        MOV  [colisao_sonda_ast], R10    ; escreve na variável a instância do asteroide
-                                         ; em que houve colisão
+        MOV  R7, 1                      ; indicador a 1 para a sonda saber que colidiu com um asteroide
+        MOV  R8, asteroide_sonda
+        SHL  R10, 1
+        MOV  [R8+R10], R7               ; escreve na instância do asteroide
+                                        ; a avisar que houve colisão com a sonda
             
     sai_verifica_colisao_sonda:
     
     POP  R10
-    POP  R9
     POP  R8
     POP  R6
     POP  R5
@@ -2006,6 +2012,14 @@ pausa_proc:
     MOV [pausa_energia], R0
     MOV [pausa_nave], R0
     MOV R1, pausa_asteroide
+    MOV [R1], R0
+    ADD R1, 2
+    MOV [R1], R0
+    ADD R1, 2
+    MOV [R1], R0
+    ADD R1, 2
+    MOV [R1], R0
+    MOV R1, pausa_sonda
     MOV [R1], R0
     ADD R1, 2
     MOV [R1], R0
