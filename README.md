@@ -1,4 +1,4 @@
-Introduction to Computer Architecture course in IST
+Introduction to Computer Architecture course at IST
 
 Grades:
 
